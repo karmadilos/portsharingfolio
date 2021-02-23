@@ -1,30 +1,23 @@
 import React, { useState } from "react";
+import Register from "./Register";
+
 export default function Login() {
   return (
-    <>
-      <h1>Create</h1>
-      <form
-        action="topics"
-        method="post"
-        onSubmit={function (e) {
-          e.preventDefault();
-          props.onCreate({
-            title: e.target.title.value,
-            description: e.target.description.value,
-          });
-          e.target.reset();
-        }}
-      >
-        <p>
-          <input type="text" name="title" placeholder="title" />
-        </p>
-        <p>
-          <textarea name="description" placeholder="description" />
-        </p>
-        <p>
-          <input type="submit" />
-        </p>
+    <article>
+      <form action="login" method="post">
+        <div>
+          <label>Email address</label>
+          <input type="email" name="email" placeholder="Enter email" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Password" />
+        </div>
+        <div>
+          <button type="submit">로그인</button>
+          <button type="button">회원가입하기</button>
+        </div>
       </form>
-    </>
+    </article>
   );
 }
