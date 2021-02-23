@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*- 
 import pymysql
 from flask import Flask, jsonify, request, session
 from flask_restful import reqparse, abort, Api, Resource
