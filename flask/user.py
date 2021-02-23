@@ -25,6 +25,8 @@ def register():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        password_confirm = request.form['password_confirm']
+        name = request.form['name']
         db = get_db()
         error = None
 
@@ -34,6 +36,11 @@ def register():
         #password error
         elif not password:
             error = 'Password가 유효하지 않습니다.'
+        #different password
+        elif password != password_confirm:
+            error = 'Password가 다릅니다.'
+        elif not name:
+            error = 'Name이 유효하지 않습니다.'
         #existing error
         elif db.execute(
             'SELECT id FROM user WHERE email = ?', (email,)
@@ -51,7 +58,7 @@ def register():
         # error message
         flash(error)
 
-    return render_template('auth/register.html')
+    return render_template('/register.html')
 
 @app.route('/login', methods=('GET', 'POST'))
 def login():
@@ -81,4 +88,4 @@ def login():
         # error message
         flash(error)
 
-    return render_template('auth/login.html')
+    return render_template('/login.html')
