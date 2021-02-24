@@ -1,5 +1,4 @@
-Drop TABLE IF EXISTS users;
-CREATE table users (
+CREATE table IF NOT EXISTS users (
     id INT NOT NULL  AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL,
     password TEXT NOT NULL,
