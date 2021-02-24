@@ -14,7 +14,7 @@ app.config.from_mapping(SECRET_KEY='dev')
 
 db = pymysql.connect(
         user = 'root',
-        passwd = 'qlalfqjsgh486',
+        passwd = 'devpass',
         host = '127.0.0.1',
         port = 3306,
         db = 'elice_racer_portfolio',
