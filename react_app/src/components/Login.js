@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Register from "./Register";
+import { Link } from "react-router-dom";
 
 export default function Login() {
   return (
@@ -15,7 +15,9 @@ export default function Login() {
         </div>
         <div>
           <button type="submit">로그인</button>
-          <button type="button">회원가입하기</button>
+          <Link to="/register">
+            <button>회원가입하기</button>
+          </Link>
         </div>
       </form>
     </article>

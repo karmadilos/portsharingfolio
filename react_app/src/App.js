@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "./App.css";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import { Route, HashRouter } from "react-router-dom";
 
 function App() {
   return (
-    <div className="App">
-      <Login />
-      <Register />
-    </div>
+    <HashRouter>
+      <div>
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+      </div>
+    </HashRouter>
   );
 }
 
