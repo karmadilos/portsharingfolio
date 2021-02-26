@@ -1,39 +1,51 @@
 import React, { useState } from "react";
+import { Redirect } from "react-router-dom";
 import axios from "axios";
 
 export default function Register() {
-  const api_url = "http://localhost:5000/register";
-  const [data, setData] = useState({
+  const api_url = "http://localhost:5000/";
+  const [input, setInput] = useState({
     email: "",
     password: "",
     password_confirm: "",
     name: "",
   });
+  const [status, setStatus] = useState();
+  const [msg, setMsg] = useState("");
 
-  const inputData = (key, input) => {
-    setData({
-      ...data,
-      [key]: input,
+  const inputData = (key, data) => {
+    setInput({
+      ...input,
+      [key]: data,
     });
   };
 
-  async function signup(e) {
+  async function register(e) {
     e.preventDefault();
-    const result = {
-      email: data.email,
-      password: data.password,
-      password_confirm: data.password_confirm,
-      name: data.name,
+    const data = {
+      email: input.email,
+      password: input.password,
+      password_confirm: input.password_confirm,
+      name: input.name,
     };
-    console.log(result);
-    await axios.post(api_url, data).then((response) => {
+    await axios.post(api_url + "register", data).then((response) => {
       console.log(JSON.stringify(response));
+      setStatus(response.data.status);
+      setMsg(response.data.message);
     });
+    execute();
+  }
+
+  function execute() {
+    alert(msg);
+    if (status === "success") {
+      return <Redirect to="/" />;
+    }
   }
 
   return (
     <article>
-      <form onSubmit={signup}>
+      <form onSubmit={register}>
         <div>
           <label>Email address</label>
           <input

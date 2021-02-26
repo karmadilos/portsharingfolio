@@ -2,16 +2,20 @@ import React from "react";
 import "./App.css";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import { Route, HashRouter } from "react-router-dom";
+import Main from "./components/Main";
+import { BrowserRouter, Route, Switch } from "react-router-dom";
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <div>
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
+        <Switch>
+          <Route exact path="/" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/main" component={Main} />
+        </Switch>
       </div>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
