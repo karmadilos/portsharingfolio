@@ -23,7 +23,7 @@ export default function Register() {
     });
   };
 
-  function register(e) {
+  async function register(e) {
     e.preventDefault();
     const data = {
       email: input.email,
@@ -31,8 +31,7 @@ export default function Register() {
       password_confirm: input.password_confirm,
       name: input.name,
     };
-    axios.post(api_url + "register", data).then((response) => {
-      console.log(JSON.stringify(response));
+    await axios.post(api_url + "register", data).then((response) => {
       setStatus(response.data.status);
       setMsg(response.data.message);
     });

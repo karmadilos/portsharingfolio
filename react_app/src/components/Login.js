@@ -18,11 +18,10 @@ export default function Login() {
     });
   };
 
-  function login(e) {
+  async function login(e) {
     e.preventDefault();
     const data = { email: input.email, password: input.password };
-    axios.post(api_url + "login", data).then((response) => {
-      console.log(response);
+    await axios.post(api_url + "login", data).then((response) => {
       localStorage.setItem("token", response.data.access_token);
       setStatus(response.data.status);
       setMsg(response.data.result.message);

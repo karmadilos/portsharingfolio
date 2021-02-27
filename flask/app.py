@@ -59,7 +59,7 @@ def register():
             error = "Name이 유효하지 않습니다."
 
         # existing error
-        sql = "SELECT id FROM users WHERE email = %s"
+        sql = "SELECT id FROM User WHERE email = %s"
         cursor.execute(sql, (email,))
         result = cursor.fetchone()
         if result is not None:
@@ -67,10 +67,22 @@ def register():
 
         # no error occurs, execute
         if error is None:
-            sql = (
-                "INSERT INTO `users` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
-            )
+            sql = "INSERT INTO `User` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
             cursor.execute(sql, (name, email, generate_password_hash(password)))
+            db.commit()
+            # find user_id
+            sql = "SELECT id FROM User WHERE email = %s"
+            cursor.execute(sql, (email,))
+            user_id = cursor.fetchone()
+            # update UserInfo
+            sql = "INSERT INTO `UserInfo` (`image_path`, `user_id`) VALUES (%s, %s)"
+            cursor.execute(
+                sql,
+                (
+                    "https://thumbs.dreamstime.com/b/default-avatar-profile-image-vector-social-media-user-icon-potrait-182347582.jpg",
+                    user_id,
+                ),
+            )
             db.commit()
             return jsonify({"status": "success", "message": "등록되었습니다."})
 
@@ -87,7 +99,7 @@ def login():
         error = None
 
         # find from db
-        sql = "SELECT email, password, name FROM users WHERE email = %s"
+        sql = "SELECT email, password, name FROM User WHERE email = %s"
         cursor.execute(sql, (email,))
         user = cursor.fetchone()
         # user not found
@@ -116,12 +128,49 @@ def login():
     return jsonify(status="fail", result={"message": error})
 
 
-@app.route("/protected", methods=["GET"])
+@app.route("/main", methods=["GET", "POST"])
 @jwt_required()
-def protected():
+def main():
     # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+
+    if request.method == "POST":
+        data = request.get_json()
+        name = data.get("name")
+        info = data.get("info")
+        # path = data.get("path")
+
+        # find user_id
+        sql = "SELECT id FROM User WHERE email = %s"
+        cursor.execute(sql, current_user)
+        user_id = cursor.fetchone()
+
+        sql = "UPDATE `User` SET `name` = %s WHERE id = %s"
+        cursor.execute(sql, (name, user_id))
+        db.commit()
+
+        sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
+        cursor.execute(sql, (info, user_id))
+        db.commit()
+        return (
+            jsonify(
+                logged_in_as=current_user,
+                name=user[0],
+                image_path=user[1],
+                info=user[2],
+            ),
+            200,
+        )
+
+    sql = "SELECT name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE email = %s"
+    cursor.execute(sql, current_user)
+    user = cursor.fetchone()
+    return (
+        jsonify(
+            logged_in_as=current_user, name=user[0], image_path=user[1], info=user[2]
+        ),
+        200,
+    )
 
 
 # if not neccessary delete this
