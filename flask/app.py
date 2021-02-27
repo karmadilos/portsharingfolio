@@ -52,7 +52,7 @@ def register():
             error = "Password가 유효하지 않습니다."
         # different password
         elif password != password_confirm:
-            error = "Password가 다릅니다."
+            error = "Password가 일치하지 않습니다."
 
         # name error
         elif not name:
@@ -124,12 +124,13 @@ def protected():
     return jsonify(logged_in_as=current_user), 200
 
 
-@app.route("/logout", methods=["GET", "POST"])
-def logout():
-    session.clear()
-    return jsonify(status="success", result={"message": "로그아웃 되었습니다."})
+# if not neccessary delete this
+# @app.route("/logout", methods=["GET", "POST"])
+# def logout():
+#     session.clear()
+#     return jsonify(status="success", result={"message": "로그아웃 되었습니다."})
 
 
 if __name__ == "__main__":
-    app.run("0.0.0.0", port=5000)
+    app.run("0.0.0.0", port=5000, debug=True)
     # app.run("0.0.0.0", port=80, debug=True)
