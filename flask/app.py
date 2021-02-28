@@ -14,7 +14,7 @@ app.config.from_mapping(SECRET_KEY='dev')
 
 db = pymysql.connect(
         user = 'root',
-        passwd = 'devpass',
+        passwd = '',
         host = '127.0.0.1',
         port = 3306,
         db = 'elice_racer_portfolio',
@@ -126,4 +126,4 @@ def login():
     return jsonify({'status': 'error', 'message': error})
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=80, debug=True)
+    app.run('0.0.0.0', port=5000)
