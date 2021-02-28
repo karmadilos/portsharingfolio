@@ -152,15 +152,8 @@ def main():
         sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
         cursor.execute(sql, (info, user_id))
         db.commit()
-        return (
-            jsonify(
-                logged_in_as=current_user,
-                name=user[0],
-                image_path=user[1],
-                info=user[2],
-            ),
-            200,
-        )
+
+        return jsonify(logged_in_as=current_user), 200
 
     sql = "SELECT name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE email = %s"
     cursor.execute(sql, current_user)
@@ -182,4 +175,3 @@ def main():
 
 if __name__ == "__main__":
     app.run("0.0.0.0", port=5000, debug=True)
-    # app.run("0.0.0.0", port=80, debug=True)

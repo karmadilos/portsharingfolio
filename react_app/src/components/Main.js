@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
+import Education from "./Education";
+import Awards from "./Awards";
+import Project from "./Project";
+import Certificate from "./Awards";
 import { Button, Card, Container, Col, Row, Form } from "react-bootstrap/";
 
 export default function Main() {
   const api_url = "http://localhost:5000/";
   const token = localStorage.getItem("token");
+  const options = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [path, setPath] = useState("");
@@ -14,33 +23,21 @@ export default function Main() {
   const [isToggled, setIsToggled] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(api_url + "main", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((response) => {
-        setEmail(response.data.logged_in_as);
-        setName(response.data.name);
-        setPath(response.data.image_path);
-      });
+    axios.get(api_url + "main", options).then((response) => {
+      setEmail(response.data.logged_in_as);
+      setName(response.data.name);
+      setPath(response.data.image_path);
+    });
   }, [token]);
 
   function edit(e) {
     e.preventDefault();
-    console.log(path);
     const data = {
       name: name,
       info: info,
       // path: path
     };
-    axios.post(api_url + "main", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      data,
-    });
+    axios.post(api_url + "main", data, options);
     setIsToggled(false);
   }
 
@@ -110,7 +107,7 @@ export default function Main() {
                       <img
                         width="64"
                         height="64"
-                        class="mb-3"
+                        className="mb-3"
                         src={path}
                         alt="Generic placeholder"
                       />
@@ -134,7 +131,12 @@ export default function Main() {
                 )}
               </Card>
             </Col>
-            <Col></Col>
+            <Col>
+              <Education />
+              <Awards />
+              <Project />
+              <Certificate />
+            </Col>
           </Row>
         </Container>
       </div>
