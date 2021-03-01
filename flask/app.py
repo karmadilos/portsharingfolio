@@ -173,6 +173,7 @@ def main():
 
 
 parser = reqparse.RequestParser()
+parser.add_argument("id")
 parser.add_argument("college")
 parser.add_argument("major")
 parser.add_argument("degree")
@@ -184,7 +185,9 @@ class Education(Resource):
         current_id = get_jwt_identity()
 
         if not user_id:
-            sql = "SELECT college, major, degree FROM `Education` WHERE user_id = %s"
+            sql = (
+                "SELECT id, college, major, degree FROM `Education` WHERE user_id = %s"
+            )
             cursor.execute(sql, current_id)
             result = cursor.fetchall()
             return jsonify(status="success", result=result)
@@ -192,8 +195,8 @@ class Education(Resource):
     @jwt_required()
     def post(self):
         current_id = get_jwt_identity()
-
         args = parser.parse_args()
+
         if args["college"] != "" and args["major"] != "":
             sql = "INSERT INTO `Education` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
             cursor.execute(
@@ -205,14 +208,17 @@ class Education(Resource):
 
     @jwt_required()
     def put(self):
+        current_id = get_jwt_identity()
         args = parser.parse_args()
-        sql = "UPDATE `board` SET name = %s WHERE `id` = %s"
-        cursor.execute(sql, (args["name"], args["id"]))
+
+        sql = "UPDATE `Education` SET college = %s, major = %s, degree = %s WHERE `id` = %s AND `user_id` = %s"
+        cursor.execute(
+            sql,
+            (args["college"], args["major"], args["degree"], args["id"], current_id),
+        )
         db.commit()
 
-        return jsonify(
-            status="success", result={"id": args["id"], "name": args["name"]}
-        )
+        return jsonify(status="success")
 
     @jwt_required()
     def delete(self):
