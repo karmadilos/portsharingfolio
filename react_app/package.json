@@ -6,11 +6,8 @@
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
-<<<<<<< HEAD
     "bootstrap": "^4.6.0",
-=======
     "axios": "^0.21.1",
->>>>>>> 57e037c3397e6be53585556e22e2f08687570529
     "react": "^17.0.1",
     "react-bootstrap": "^1.5.0",
     "react-dom": "^17.0.1",
@@ -20,7 +17,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "export PORT=80 && react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

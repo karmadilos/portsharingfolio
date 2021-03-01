@@ -10,15 +10,22 @@ export default function Education() {
       Authorization: `Bearer ${token}`,
     },
   };
-  const [input, setInput] = useState({ college: "", major: "", degree: 0 });
+  const [input, setInput] = useState({
+    id: 0,
+    college: "",
+    major: "",
+    degree: 0,
+  });
   const [output, setOutput] = useState([]);
   const [check, setCheck] = useState(0);
+  const [option, setOption] = useState();
   const position = { 0: "재학중", 1: "학사졸업", 2: "석사졸업", 3: "박사졸업" };
 
   const [isToggled, setIsToggled] = useState(false);
 
   useEffect(() => {
     axios.get(api_url + "education", options).then((response) => {
+      console.log(response.data.result);
       setOutput(response.data.result);
     });
   }, [check]);
@@ -27,7 +34,7 @@ export default function Education() {
     <Card.Text>
       <Row>
         <Col>
-          {edu[0]} {edu[1]}({position[edu[2]]})
+          {edu[1]} {edu[2]}({position[edu[3]]})
         </Col>
         <Col xs lg="2">
           <Button
@@ -35,7 +42,13 @@ export default function Education() {
             variant="link"
             onClick={() => {
               setIsToggled(true);
-              setInput({ college: edu[0], major: edu[1], degree: edu[2] });
+              setOption("edit");
+              setInput({
+                id: edu[0],
+                college: edu[1],
+                major: edu[2],
+                degree: edu[3],
+              });
             }}
           >
             Edit
@@ -55,14 +68,23 @@ export default function Education() {
   function add(e) {
     e.preventDefault();
     const data = {
+      id: input.id,
       college: input.college,
       major: input.major,
       degree: input.degree,
     };
-    axios.post(api_url + "education", data, options);
-    setIsToggled(false);
-    setCheck(check + 1);
-    setInput({ college: "", major: "", degree: 0 });
+
+    if (option === "add") {
+      axios.post(api_url + "education", data, options);
+      setIsToggled(false);
+      setCheck(check + 1);
+      setInput({ college: "", major: "", degree: 0 });
+    } else if (option === "edit") {
+      axios.put(api_url + "education", data, options);
+      setIsToggled(false);
+      setCheck(check + 1);
+      setInput({ college: "", major: "", degree: 0 });
+    }
   }
 
   return (
@@ -138,7 +160,13 @@ export default function Education() {
           </Form>
         )}
         <Row className="justify-content-md-center mt-3">
-          <Button type="button" onClick={() => setIsToggled(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              setIsToggled(true);
+              setOption("add");
+            }}
+          >
             +
           </Button>
         </Row>
