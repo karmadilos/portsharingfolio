@@ -24,9 +24,10 @@ export default function Main() {
 
   useEffect(() => {
     axios.get(api_url + "main", options).then((response) => {
-      setEmail(response.data.logged_in_as);
+      setEmail(response.data.email);
       setName(response.data.name);
       setPath(response.data.image_path);
+      setInfo(response.data.info);
     });
   }, [token]);
 

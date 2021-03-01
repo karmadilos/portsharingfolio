@@ -99,14 +99,14 @@ def login():
         error = None
 
         # find from db
-        sql = "SELECT email, password, name FROM User WHERE email = %s"
+        sql = "SELECT id, email, password, name FROM User WHERE email = %s"
         cursor.execute(sql, (email,))
         user = cursor.fetchone()
         # user not found
         if user is None:
             error = "등록되지 않은 계정입니다."
         # password not match
-        if not (user == None or check_password_hash(user[1], password)):
+        if not (user == None or check_password_hash(user[2], password)):
             error = "Password가 틀렸습니다."
 
         # No errors
@@ -117,11 +117,11 @@ def login():
             # session["user_id"] = user[0] --> if session no necessary delete this
 
             # make jwt token
-            access_token = create_access_token(identity=email)
+            access_token = create_access_token(identity=user[0])
             return jsonify(
                 status="success",
                 access_token=access_token,
-                user_name=user[2],
+                user_name=user[3],
                 result={"message": "로그인"},
             )
 
@@ -140,38 +140,91 @@ def main():
         info = data.get("info")
         # path = data.get("path")
 
-        # find user_id
-        sql = "SELECT id FROM User WHERE email = %s"
-        cursor.execute(sql, current_user)
-        user_id = cursor.fetchone()
-
         sql = "UPDATE `User` SET `name` = %s WHERE id = %s"
-        cursor.execute(sql, (name, user_id))
+        cursor.execute(sql, (name, current_user))
         db.commit()
 
         sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
-        cursor.execute(sql, (info, user_id))
+        cursor.execute(sql, (info, current_user))
         db.commit()
 
         return jsonify(logged_in_as=current_user), 200
 
-    sql = "SELECT name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE email = %s"
+    sql = "SELECT email, name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE User.id = %s"
     cursor.execute(sql, current_user)
     user = cursor.fetchone()
     return (
         jsonify(
-            logged_in_as=current_user, name=user[0], image_path=user[1], info=user[2]
+            logged_in_as=current_user,
+            email=user[0],
+            name=user[1],
+            image_path=user[2],
+            info=user[3],
         ),
         200,
     )
 
 
 # if not neccessary delete this
-# @app.route("/logout", methods=["GET", "POST"])
+# @app.route("/logout", methods=["GET"])
 # def logout():
-#     session.clear()
+#     db.close()
 #     return jsonify(status="success", result={"message": "로그아웃 되었습니다."})
 
+
+parser = reqparse.RequestParser()
+parser.add_argument("college")
+parser.add_argument("major")
+parser.add_argument("degree")
+
+
+class Education(Resource):
+    @jwt_required()
+    def get(self, user_id=None):
+        current_id = get_jwt_identity()
+
+        if not user_id:
+            sql = "SELECT college, major, degree FROM `Education` WHERE user_id = %s"
+            cursor.execute(sql, current_id)
+            result = cursor.fetchall()
+            return jsonify(status="success", result=result)
+
+    @jwt_required()
+    def post(self):
+        current_id = get_jwt_identity()
+
+        args = parser.parse_args()
+        if args["college"] != "" and args["major"] != "":
+            sql = "INSERT INTO `Education` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
+            cursor.execute(
+                sql, (args["college"], args["major"], args["degree"], current_id)
+            )
+            db.commit()
+
+        return jsonify(status="success")
+
+    @jwt_required()
+    def put(self):
+        args = parser.parse_args()
+        sql = "UPDATE `board` SET name = %s WHERE `id` = %s"
+        cursor.execute(sql, (args["name"], args["id"]))
+        db.commit()
+
+        return jsonify(
+            status="success", result={"id": args["id"], "name": args["name"]}
+        )
+
+    @jwt_required()
+    def delete(self):
+        args = parser.parse_args()
+        sql = "DELETE FROM `board` WHERE `id` = %s"
+        cursor.execute(sql, (args["id"],))
+        db.commit()
+
+        return jsonify(status="success", result={"id": args["id"]})
+
+
+api.add_resource(Education, "/education", "/education/<user_id>")
 
 if __name__ == "__main__":
     app.run("0.0.0.0", port=5000, debug=True)
