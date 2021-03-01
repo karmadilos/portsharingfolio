@@ -8,7 +8,8 @@ import Certificate from "./Awards";
 import { Button, Card, Container, Col, Row, Form } from "react-bootstrap/";
 
 export default function Main() {
-  const api_url = "http://localhost:5000/";
+  const api_url =
+    "http://elice-kdt-ai-track-vm-racer-36.koreacentral.cloudapp.azure.com:5000/";
   const token = localStorage.getItem("token");
   const options = {
     headers: {

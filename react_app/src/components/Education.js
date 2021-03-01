@@ -3,7 +3,8 @@ import axios from "axios";
 import { Button, Card, Col, Row, Form } from "react-bootstrap/";
 
 export default function Education() {
-  const api_url = "http://localhost:5000/";
+  const api_url =
+    "http://elice-kdt-ai-track-vm-racer-36.koreacentral.cloudapp.azure.com:5000/";
   const token = localStorage.getItem("token");
   const options = {
     headers: {

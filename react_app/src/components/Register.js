@@ -5,7 +5,8 @@ import { useHistory } from "react-router-dom";
 import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Register() {
-  const api_url = "http://localhost:5000/";
+  const api_url =
+    "http://elice-kdt-ai-track-vm-racer-36.koreacentral.cloudapp.azure.com:5000/";
   const [input, setInput] = useState({
     email: "",
     password: "",
