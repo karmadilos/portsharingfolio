@@ -28,7 +28,6 @@ db = pymysql.connect(
     db="elice_racer_portfolio",
     charset="utf8",
 )
-cursor = db.cursor()
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -59,30 +58,34 @@ def register():
             error = "Name이 유효하지 않습니다."
 
         # existing error
-        sql = "SELECT id FROM User WHERE email = %s"
-        cursor.execute(sql, (email,))
-        result = cursor.fetchone()
+        with db.cursor() as cursor:
+            sql = "SELECT id FROM User WHERE email = %s"
+            cursor.execute(sql, (email,))
+            result = cursor.fetchone()
         if result is not None:
             error = "{} 계정은 이미 등록된 계정입니다.".format(email)
 
         # no error occurs, execute
         if error is None:
-            sql = "INSERT INTO `User` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
-            cursor.execute(sql, (name, email, generate_password_hash(password)))
+            with db.cursor() as cursor:
+                sql = "INSERT INTO `User` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
+                cursor.execute(sql, (name, email, generate_password_hash(password)))
             db.commit()
-            # find user_id
-            sql = "SELECT id FROM User WHERE email = %s"
-            cursor.execute(sql, (email,))
-            user_id = cursor.fetchone()
-            # update UserInfo
-            sql = "INSERT INTO `UserInfo` (`image_path`, `user_id`) VALUES (%s, %s)"
-            cursor.execute(
-                sql,
-                (
-                    "https://thumbs.dreamstime.com/b/default-avatar-profile-image-vector-social-media-user-icon-potrait-182347582.jpg",
-                    user_id,
-                ),
-            )
+
+            with db.cursor() as cursor:
+                # find user_id
+                sql = "SELECT id FROM User WHERE email = %s"
+                cursor.execute(sql, (email,))
+                user_id = cursor.fetchone()
+                # update UserInfo
+                sql = "INSERT INTO `UserInfo` (`image_path`, `user_id`) VALUES (%s, %s)"
+                cursor.execute(
+                    sql,
+                    (
+                        "https://thumbs.dreamstime.com/b/default-avatar-profile-image-vector-social-media-user-icon-potrait-182347582.jpg",
+                        user_id,
+                    ),
+                )
             db.commit()
             return jsonify({"status": "success", "message": "등록되었습니다."})
 
@@ -99,9 +102,10 @@ def login():
         error = None
 
         # find from db
-        sql = "SELECT id, email, password, name FROM User WHERE email = %s"
-        cursor.execute(sql, (email,))
-        user = cursor.fetchone()
+        with db.cursor() as cursor:
+            sql = "SELECT id, email, password, name FROM User WHERE email = %s"
+            cursor.execute(sql, (email,))
+            user = cursor.fetchone()
         # user not found
         if user is None:
             error = "등록되지 않은 계정입니다."
@@ -140,19 +144,22 @@ def main():
         info = data.get("info")
         # path = data.get("path")
 
-        sql = "UPDATE `User` SET `name` = %s WHERE id = %s"
-        cursor.execute(sql, (name, current_user))
+        with db.cursor() as cursor:
+            sql = "UPDATE `User` SET `name` = %s WHERE id = %s"
+            cursor.execute(sql, (name, current_user))
         db.commit()
 
-        sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
-        cursor.execute(sql, (info, current_user))
+        with db.cursor() as cursor:
+            sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
+            cursor.execute(sql, (info, current_user))
         db.commit()
 
         return jsonify(logged_in_as=current_user), 200
 
-    sql = "SELECT email, name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE User.id = %s"
-    cursor.execute(sql, current_user)
-    user = cursor.fetchone()
+    with db.cursor() as cursor:
+        sql = "SELECT email, name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE User.id = %s"
+        cursor.execute(sql, current_user)
+        user = cursor.fetchone()
     return (
         jsonify(
             logged_in_as=current_user,
@@ -185,11 +192,10 @@ class Education(Resource):
         current_id = get_jwt_identity()
 
         if not user_id:
-            sql = (
-                "SELECT id, college, major, degree FROM `Education` WHERE user_id = %s"
-            )
-            cursor.execute(sql, current_id)
-            result = cursor.fetchall()
+            with db.cursor() as cursor:
+                sql = "SELECT id, college, major, degree FROM `Education` WHERE user_id = %s"
+                cursor.execute(sql, current_id)
+                result = cursor.fetchall()
             return jsonify(status="success", result=result)
 
     @jwt_required()
@@ -198,10 +204,11 @@ class Education(Resource):
         args = parser.parse_args()
 
         if args["college"] != "" and args["major"] != "":
-            sql = "INSERT INTO `Education` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
-            cursor.execute(
-                sql, (args["college"], args["major"], args["degree"], current_id)
-            )
+            with db.cursor() as cursor:
+                sql = "INSERT INTO `Education` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
+                cursor.execute(
+                    sql, (args["college"], args["major"], args["degree"], current_id)
+                )
             db.commit()
 
         return jsonify(status="success")
@@ -211,11 +218,18 @@ class Education(Resource):
         current_id = get_jwt_identity()
         args = parser.parse_args()
 
-        sql = "UPDATE `Education` SET college = %s, major = %s, degree = %s WHERE `id` = %s AND `user_id` = %s"
-        cursor.execute(
-            sql,
-            (args["college"], args["major"], args["degree"], args["id"], current_id),
-        )
+        with db.cursor() as cursor:
+            sql = "UPDATE `Education` SET college = %s, major = %s, degree = %s WHERE `id` = %s AND `user_id` = %s"
+            cursor.execute(
+                sql,
+                (
+                    args["college"],
+                    args["major"],
+                    args["degree"],
+                    args["id"],
+                    current_id,
+                ),
+            )
         db.commit()
 
         return jsonify(status="success")
@@ -223,11 +237,14 @@ class Education(Resource):
     @jwt_required()
     def delete(self):
         args = parser.parse_args()
-        sql = "DELETE FROM `board` WHERE `id` = %s"
-        cursor.execute(sql, (args["id"],))
+        print(args["id"])
+
+        with db.cursor() as cursor:
+            sql = "DELETE FROM `Education` WHERE `id` = %s"
+            cursor.execute(sql, (args["id"],))
         db.commit()
 
-        return jsonify(status="success", result={"id": args["id"]})
+        return jsonify(status="success")
 
 
 api.add_resource(Education, "/education", "/education/<user_id>")

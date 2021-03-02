@@ -18,7 +18,7 @@ export default function Education() {
   });
   const [output, setOutput] = useState([]);
   const [check, setCheck] = useState(0);
-  const [option, setOption] = useState();
+  const [option, setOption] = useState("");
   const position = { 0: "재학중", 1: "학사졸업", 2: "석사졸업", 3: "박사졸업" };
 
   const [isToggled, setIsToggled] = useState(false);
@@ -33,7 +33,7 @@ export default function Education() {
     <Card.Text>
       <Row>
         <Col>
-          {edu[1]} {edu[2]}({position[edu[3]]})
+          {edu[1]} {edu[2]} ({position[edu[3]]})
         </Col>
         <Col xs lg="2">
           <Button
@@ -85,6 +85,20 @@ export default function Education() {
       setCheck(check + 1);
       setInput({ college: "", major: "", degree: 0 });
     }
+  }
+
+  function clear(e) {
+    e.preventDefault();
+
+    axios.delete(api_url + "education", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      data: { id: input.id },
+    });
+    setIsToggled(false);
+    setCheck(check - 1);
+    setInput({ college: "", major: "", degree: 0 });
   }
 
   return (
@@ -146,6 +160,16 @@ export default function Education() {
               <Button className="mr-2" type="submit" variant="primary">
                 확인
               </Button>
+              {option === "edit" && (
+                <Button
+                  className="mr-2"
+                  type="button"
+                  variant="danger"
+                  onClick={clear}
+                >
+                  삭제
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="secondary"
@@ -164,6 +188,7 @@ export default function Education() {
             type="button"
             onClick={() => {
               setIsToggled(true);
+              setInput({ college: "", major: "", degree: 0 });
               setOption("add");
             }}
           >
