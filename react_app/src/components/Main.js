@@ -4,7 +4,7 @@ import Navbar from "./Navbar";
 import Education from "./Education";
 import Awards from "./Awards";
 import Project from "./Project";
-import Certificate from "./Awards";
+import Certificate from "./Certificate";
 import { Button, Card, Container, Col, Row, Form } from "react-bootstrap/";
 
 export default function Main() {
