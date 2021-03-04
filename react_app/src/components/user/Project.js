@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button, Card, Col, Row, Form } from "react-bootstrap/";
+import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
-export default function Awards() {
-  const api_url = "http://localhost:5000/";
+export default function Project() {
+  const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
     headers: {
@@ -14,26 +16,33 @@ export default function Awards() {
     id: 0,
     title: "",
     description: "",
+    startdate: new Date(),
+    enddate: new Date(),
   });
   const [output, setOutput] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
 
   const [isToggled, setIsToggled] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "awards", options).then((response) => {
+    axios.get(api_url + "projects", options).then((response) => {
       setOutput(response.data.result);
     });
   }, [check]);
 
-  const awardsList = output.map((award) => (
-    <Card.Text>
+  const projectsList = output.map((project, index) => (
+    <Card.Text key={index}>
       <Row className="justify-content-between align-items-center row">
         <Col>
-          {award[1]}
+          {project["title"]}
           <br />
-          <span className="text-muted">{award[2]}</span>
+          <span className="text-muted">{project["description"]}</span>
+          <br />
+          <span className="text-muted">
+            {project["startdate"]} ~ {project["enddate"]}
+          </span>
         </Col>
         <Button
           type="button"
@@ -43,9 +52,11 @@ export default function Awards() {
             setIsToggled(true);
             setOption("edit");
             setInput({
-              id: award[0],
-              title: award[1],
-              description: award[2],
+              id: project["id"],
+              title: project["title"],
+              description: project["description"],
+              startdate: project["startdate"],
+              enddate: project["enddate"],
             });
           }}
         >
@@ -54,6 +65,9 @@ export default function Awards() {
       </Row>
     </Card.Text>
   ));
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
 
   const inputData = (key, data) => {
     setInput({
@@ -68,48 +82,65 @@ export default function Awards() {
       id: input.id,
       title: input.title,
       description: input.description,
+      startdate: input.startdate,
+      enddate: input.enddate,
     };
 
     if (option === "add") {
-      axios.post(api_url + "awards", data, options);
-      setInput({ title: "", description: "" });
+      axios.post(api_url + "projects", data, options);
       setIsToggled(false);
       setCheck(check + 1);
-      setInput({ title: "", description: "" });
+      setInput({
+        title: "",
+        description: "",
+        startdate: new Date(),
+        enddate: new Date(),
+      });
     } else if (option === "edit") {
-      axios.put(api_url + "awards", data, options);
+      axios.patch(api_url + "projects", data, options);
       setIsToggled(false);
       setCheck(check + 1);
-      setInput({ title: "", description: "" });
+      setInput({
+        title: "",
+        description: "",
+        startdate: new Date(),
+        enddate: new Date(),
+      });
     }
   }
 
   function clear(e) {
     e.preventDefault();
 
-    axios.delete(api_url + "awards", {
+    axios.delete(api_url + "projects", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
       data: { id: input.id },
     });
+    setShow(false);
     setIsToggled(false);
     setCheck(check - 1);
-    setInput({ title: "", description: "" });
+    setInput({
+      title: "",
+      description: "",
+      startdate: new Date(),
+      enddate: new Date(),
+    });
   }
 
   return (
     <Card className="mb-2">
       <Card.Body>
-        <Card.Title>수상이력</Card.Title>
-        {awardsList}
+        <Card.Title>프로젝트</Card.Title>
+        {projectsList}
         {isToggled && (
           <Form onSubmit={add}>
             <Form.Group controlId="formBasicTitle">
               <Form.Control
                 type="text"
                 name="title"
-                placeholder="수상내역"
+                placeholder="프로젝트 제목"
                 value={input.title}
                 onChange={(e) => inputData("title", e.target.value)}
               />
@@ -123,6 +154,20 @@ export default function Awards() {
                 onChange={(e) => inputData("description", e.target.value)}
               />
             </Form.Group>
+            <Form.Row>
+              <Col xs="auto">
+                <DatePicker
+                  selected={input.startdate}
+                  onChange={(date) => inputData("startdate", date)}
+                />
+              </Col>
+              <Col xs="auto">
+                <DatePicker
+                  selected={input.enddate}
+                  onChange={(date) => inputData("enddate", date)}
+                />
+              </Col>
+            </Form.Row>
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -132,17 +177,36 @@ export default function Awards() {
                   className="mr-2"
                   type="button"
                   variant="danger"
-                  onClick={clear}
+                  onClick={handleShow}
                 >
                   삭제
                 </Button>
               )}
+              <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                  <Modal.Title>정말 삭제하시겠습니까?</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>삭제하시면 되돌릴 수 없습니다!</Modal.Body>
+                <Modal.Footer>
+                  <Button variant="danger" onClick={clear}>
+                    삭제
+                  </Button>
+                  <Button variant="secondary" onClick={handleClose}>
+                    취소
+                  </Button>
+                </Modal.Footer>
+              </Modal>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
                   setIsToggled(!isToggled);
-                  setInput({ title: "", description: "" });
+                  setInput({
+                    title: "",
+                    description: "",
+                    startdate: new Date(),
+                    enddate: new Date(),
+                  });
                 }}
               >
                 취소
@@ -155,7 +219,12 @@ export default function Awards() {
             type="button"
             onClick={() => {
               setIsToggled(true);
-              setInput({ title: "", description: "" });
+              setInput({
+                title: "",
+                description: "",
+                startdate: new Date(),
+                enddate: new Date(),
+              });
               setOption("add");
             }}
           >

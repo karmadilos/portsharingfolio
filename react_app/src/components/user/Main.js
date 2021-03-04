@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Navbar from "./Navbar";
+import Navbar from "../auth/Navbar";
 import Education from "./Education";
 import Awards from "./Awards";
 import Project from "./Project";
@@ -8,7 +8,7 @@ import Certificate from "./Certificate";
 import { Button, Card, Container, Col, Row, Form } from "react-bootstrap/";
 
 export default function Main() {
-  const api_url = "http://localhost:5000/";
+  const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
     headers: {
@@ -29,7 +29,7 @@ export default function Main() {
       setPath(response.data.image_path);
       setInfo(response.data.info);
     });
-  }, [token]);
+  }, []);
 
   function edit(e) {
     e.preventDefault();
@@ -38,7 +38,7 @@ export default function Main() {
       info: info,
       // path: path
     };
-    axios.post(api_url + "main", data, options);
+    axios.patch(api_url + "main", data, options);
     setIsToggled(false);
   }
 

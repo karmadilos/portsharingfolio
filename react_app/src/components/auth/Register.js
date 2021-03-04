@@ -5,7 +5,7 @@ import { useHistory } from "react-router-dom";
 import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Register() {
-  const api_url = "http://localhost:5000/";
+  const api_url = process.env.REACT_APP_API_URL;
   const [input, setInput] = useState({
     email: "",
     password: "",

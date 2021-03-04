@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import axios from "axios";
 import { useHistory, Link } from "react-router-dom";
 import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Login() {
-  const api_url = "http://localhost:5000/";
+  const api_url = process.env.REACT_APP_API_URL;
   const [input, setInput] = useState({ email: "", password: "" });
   const [status, setStatus] = useState();
   const [msg, setMsg] = useState("");
@@ -28,9 +28,12 @@ export default function Login() {
     });
   }
 
-  if (status === "success") {
-    history.push("/main");
-  }
+  useEffect(() => {
+    if (!status) return;
+    if (status === "success") {
+      history.push("/main");
+    }
+  }, [status]);
 
   return (
     <>

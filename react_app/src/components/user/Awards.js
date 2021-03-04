@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button, Card, Col, Row, Form } from "react-bootstrap/";
+import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
 
-export default function Education() {
-  const api_url = "http://localhost:5000/";
+export default function Awards() {
+  const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
     headers: {
@@ -12,32 +12,29 @@ export default function Education() {
   };
   const [input, setInput] = useState({
     id: 0,
-    college: "",
-    major: "",
-    degree: 0,
+    title: "",
+    description: "",
   });
   const [output, setOutput] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
-  const position = { 0: "재학중", 1: "학사졸업", 2: "석사졸업", 3: "박사졸업" };
 
   const [isToggled, setIsToggled] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "education", options).then((response) => {
+    axios.get(api_url + "awards", options).then((response) => {
       setOutput(response.data.result);
     });
   }, [check]);
 
-  const collegList = output.map((edu) => (
-    <Card.Text>
+  const awardsList = output.map((award, index) => (
+    <Card.Text key={index}>
       <Row className="justify-content-between align-items-center row">
         <Col>
-          {edu[1]}
+          {award["title"]}
           <br />
-          <span className="text-muted">
-            {edu[2]} ({position[edu[3]]})
-          </span>
+          <span className="text-muted">{award["description"]}</span>
         </Col>
         <Button
           type="button"
@@ -47,10 +44,9 @@ export default function Education() {
             setIsToggled(true);
             setOption("edit");
             setInput({
-              id: edu[0],
-              college: edu[1],
-              major: edu[2],
-              degree: edu[3],
+              id: award["id"],
+              title: award["title"],
+              description: award["description"],
             });
           }}
         >
@@ -59,6 +55,9 @@ export default function Education() {
       </Row>
     </Card.Text>
   ));
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
 
   const inputData = (key, data) => {
     setInput({
@@ -71,94 +70,63 @@ export default function Education() {
     e.preventDefault();
     const data = {
       id: input.id,
-      college: input.college,
-      major: input.major,
-      degree: input.degree,
+      title: input.title,
+      description: input.description,
     };
 
     if (option === "add") {
-      axios.post(api_url + "education", data, options);
-      setInput({ college: "", major: "", degree: 0 });
+      axios.post(api_url + "awards", data, options);
       setIsToggled(false);
       setCheck(check + 1);
-      setInput({ college: "", major: "", degree: 0 });
+      setInput({ title: "", description: "" });
     } else if (option === "edit") {
-      axios.put(api_url + "education", data, options);
+      axios.patch(api_url + "awards", data, options);
       setIsToggled(false);
       setCheck(check + 1);
-      setInput({ college: "", major: "", degree: 0 });
+      setInput({ title: "", description: "" });
     }
   }
 
   function clear(e) {
     e.preventDefault();
 
-    axios.delete(api_url + "education", {
+    axios.delete(api_url + "awards", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
       data: { id: input.id },
     });
+    setShow(false);
     setIsToggled(false);
     setCheck(check - 1);
-    setInput({ college: "", major: "", degree: 0 });
+    setInput({ title: "", description: "" });
   }
 
   return (
     <Card className="mb-2">
       <Card.Body>
-        <Card.Title>학력</Card.Title>
-        {collegList}
+        <Card.Title>수상이력</Card.Title>
+        {awardsList}
         {isToggled && (
           <Form onSubmit={add}>
-            <Form.Group controlId="formBasicSchool">
+            <Form.Group controlId="formBasicTitle">
               <Form.Control
                 type="text"
-                name="college"
-                placeholder="학교 이름"
-                value={input.college}
-                onChange={(e) => inputData("college", e.target.value)}
+                name="title"
+                placeholder="수상내역"
+                value={input.title}
+                onChange={(e) => inputData("title", e.target.value)}
               />
             </Form.Group>
-            <Form.Group controlId="formBasicMajor">
+            <Form.Group controlId="formBasicDescription">
               <Form.Control
                 type="text"
-                name="major"
-                placeholder="전공"
-                value={input.major}
-                onChange={(e) => inputData("major", e.target.value)}
+                name="description"
+                placeholder="상세내역"
+                value={input.description}
+                onChange={(e) => inputData("description", e.target.value)}
               />
             </Form.Group>
-            <div className="mb-3">
-              <Form.Check
-                type="radio"
-                name="degree"
-                label="재학중"
-                inline
-                onChange={(e) => inputData("degree", 0)}
-              ></Form.Check>
-              <Form.Check
-                type="radio"
-                name="degree"
-                label="학사졸업"
-                inline
-                onChange={(e) => inputData("degree", 1)}
-              ></Form.Check>
-              <Form.Check
-                type="radio"
-                name="degree"
-                label="석사졸업"
-                inline
-                onChange={(e) => inputData("degree", 2)}
-              ></Form.Check>
-              <Form.Check
-                type="radio"
-                name="degree"
-                label="박사졸업"
-                inline
-                onChange={(e) => inputData("degree", 3)}
-              ></Form.Check>
-            </div>
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -168,17 +136,31 @@ export default function Education() {
                   className="mr-2"
                   type="button"
                   variant="danger"
-                  onClick={clear}
+                  onClick={handleShow}
                 >
                   삭제
                 </Button>
               )}
+              <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                  <Modal.Title>정말 삭제하시겠습니까?</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>삭제하시면 되돌릴 수 없습니다!</Modal.Body>
+                <Modal.Footer>
+                  <Button variant="danger" onClick={clear}>
+                    삭제
+                  </Button>
+                  <Button variant="secondary" onClick={handleClose}>
+                    취소
+                  </Button>
+                </Modal.Footer>
+              </Modal>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
                   setIsToggled(!isToggled);
-                  setInput({ college: "", major: "" });
+                  setInput({ title: "", description: "" });
                 }}
               >
                 취소
@@ -191,7 +173,7 @@ export default function Education() {
             type="button"
             onClick={() => {
               setIsToggled(true);
-              setInput({ college: "", major: "", degree: 0 });
+              setInput({ title: "", description: "" });
               setOption("add");
             }}
           >
