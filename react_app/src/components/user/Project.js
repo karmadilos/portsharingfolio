@@ -12,6 +12,8 @@ export default function Project() {
       Authorization: `Bearer ${token}`,
     },
   };
+
+  const moment = require("moment");
   const [input, setInput] = useState({
     id: 0,
     title: "",
@@ -41,7 +43,8 @@ export default function Project() {
           <span className="text-muted">{project["description"]}</span>
           <br />
           <span className="text-muted">
-            {project["startdate"]} ~ {project["enddate"]}
+            {moment(project["startdate"]).format("yyyy-MM-DD")} ~{" "}
+            {moment(project["enddate"]).format("yyyy-MM-DD")}
           </span>
         </Col>
         <Button
@@ -55,8 +58,8 @@ export default function Project() {
               id: project["id"],
               title: project["title"],
               description: project["description"],
-              startdate: project["startdate"],
-              enddate: project["enddate"],
+              startdate: new Date(project["startdate"]),
+              enddate: new Date(project["enddate"]),
             });
           }}
         >
@@ -157,13 +160,17 @@ export default function Project() {
             <Form.Row>
               <Col xs="auto">
                 <DatePicker
+                  closeOnScroll={true}
                   selected={input.startdate}
+                  maxDate={input.startdate}
                   onChange={(date) => inputData("startdate", date)}
                 />
               </Col>
               <Col xs="auto">
                 <DatePicker
+                  closeOnScroll={true}
                   selected={input.enddate}
+                  minDate={input.startdate}
                   onChange={(date) => inputData("enddate", date)}
                 />
               </Col>

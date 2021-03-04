@@ -29,7 +29,7 @@ export default function Main() {
       setPath(response.data.image_path);
       setInfo(response.data.info);
     });
-  }, []);
+  }, [token]);
 
   function edit(e) {
     e.preventDefault();

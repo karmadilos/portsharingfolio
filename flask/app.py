@@ -123,7 +123,7 @@ def login():
 @jwt_required()
 def main():
     # Access the identity of the current user with get_jwt_identity
-    current_user = get_jwt_identity()
+    current_id = get_jwt_identity()
 
     if request.method == "PATCH":
         data = request.get_json()
@@ -133,23 +133,23 @@ def main():
 
         with db.cursor(DictCursor) as cursor:
             sql = "UPDATE `users` SET `name` = %s WHERE id = %s"
-            cursor.execute(sql, (name, current_user))
+            cursor.execute(sql, (name, current_id))
             db.commit()
 
         with db.cursor(DictCursor) as cursor:
             sql = "UPDATE `userinfo` SET `info` = %s WHERE user_id = %s"
-            cursor.execute(sql, (info, current_user))
+            cursor.execute(sql, (info, current_id))
             db.commit()
 
-        return jsonify(logged_in_as=current_user), 200
+        return jsonify(logged_in_as=current_id), 200
 
     with db.cursor(DictCursor) as cursor:
         sql = "SELECT email, name, image_path, info FROM users JOIN userinfo ON users.id = userinfo.user_id WHERE users.id = %s"
-        cursor.execute(sql, (current_user,))
+        cursor.execute(sql, (current_id,))
         user = cursor.fetchone()
     return (
         jsonify(
-            logged_in_as=current_user,
+            logged_in_as=current_id,
             email=user["email"],
             name=user["name"],
             image_path=user["image_path"],
@@ -316,8 +316,8 @@ class Projects(Resource):
                     (
                         args["title"],
                         args["description"],
-                        args["startdate"],
-                        args["enddate"],
+                        args["startdate"].split("T")[0],
+                        args["enddate"].split("T")[0],
                         current_id,
                     ),
                 )
@@ -338,8 +338,8 @@ class Projects(Resource):
                     (
                         args["title"],
                         args["description"],
-                        args["startdate"],
-                        args["enddate"],
+                        args["startdate"].split("T")[0],
+                        args["enddate"].split("T")[0],
                         args["id"],
                         current_id,
                     ),
@@ -362,5 +362,77 @@ class Projects(Resource):
 api.add_resource(Projects, "/projects", "/projects/<user_id>")
 
 
+parser.add_argument("acquisition_date")
+
+
+class Certificates(Resource):
+    @jwt_required()
+    def get(self, user_id=None):
+        current_id = get_jwt_identity()
+
+        if not user_id:
+            with db.cursor(DictCursor) as cursor:
+                sql = "SELECT id, title, description, acquisition_date FROM `certificates` WHERE user_id = %s"
+                cursor.execute(sql, (current_id,))
+                result = cursor.fetchall()
+            return jsonify(status="success", result=result)
+
+    @jwt_required()
+    def post(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        if args["title"] != "":
+            with db.cursor(DictCursor) as cursor:
+                sql = "INSERT INTO `certificates` (`title`, `description`, `acquisition_date`, `user_id`) VALUES (%s, %s, %s, %s)"
+                cursor.execute(
+                    sql,
+                    (
+                        args["title"],
+                        args["description"],
+                        args["acquisition_date"].split("T")[0],
+                        current_id,
+                    ),
+                )
+                db.commit()
+            return jsonify(status="success")
+        return jsonify(status="fail")
+
+    @jwt_required()
+    def patch(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        if args["title"] != "":
+            with db.cursor(DictCursor) as cursor:
+                sql = "UPDATE `certificates` SET title = %s, description = %s, acquisition_date = %s WHERE `id` = %s AND `user_id` = %s"
+                cursor.execute(
+                    sql,
+                    (
+                        args["title"],
+                        args["description"],
+                        args["acquisition_date"].split("T")[0],
+                        args["id"],
+                        current_id,
+                    ),
+                )
+                db.commit()
+            return jsonify(status="success")
+        return jsonify(status="fail")
+
+    @jwt_required()
+    def delete(self):
+        args = parser.parse_args()
+
+        with db.cursor(DictCursor) as cursor:
+            sql = "DELETE FROM `certificates` WHERE `id` = %s"
+            cursor.execute(sql, (args["id"],))
+            db.commit()
+        return jsonify(status="success")
+
+
+api.add_resource(Certificates, "/certificates", "/certificates/<user_id>")
+
+
 if __name__ == "__main__":
-    app.run("0.0.0.0", port=5000, debug=True)
+    app.run("0.0.0.0", port=5000, debug=True, threaded=False)
