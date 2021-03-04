@@ -1,81 +1,101 @@
 import React, { useState } from "react";
+import Navbar from "./Navbar";
 import axios from "axios";
+import { useHistory } from "react-router-dom";
+import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Register() {
-  const api_url = "http://localhost:5000/register";
-  const [data, setData] = useState({
+  const api_url = "http://localhost:5000/";
+  const [input, setInput] = useState({
     email: "",
     password: "",
     password_confirm: "",
     name: "",
   });
+  const [status, setStatus] = useState();
+  const [msg, setMsg] = useState("");
+  let history = useHistory();
 
-  const inputData = (key, input) => {
-    setData({
-      ...data,
-      [key]: input,
+  const inputData = (key, data) => {
+    setInput({
+      ...input,
+      [key]: data,
     });
   };
 
-  async function signup(e) {
+  function register(e) {
     e.preventDefault();
-    const result = {
-      email: data.email,
-      password: data.password,
-      password_confirm: data.password_confirm,
-      name: data.name,
+    const data = {
+      email: input.email,
+      password: input.password,
+      password_confirm: input.password_confirm,
+      name: input.name,
     };
-    console.log(result);
-    await axios.post(api_url, data).then((response) => {
+    axios.post(api_url + "register", data).then((response) => {
       console.log(JSON.stringify(response));
+      setStatus(response.data.status);
+      setMsg(response.data.message);
     });
+  }
+  if (status === "success") {
+    history.push("/");
   }
 
   return (
-    <article>
-      <form onSubmit={signup}>
-        <div>
-          <label>Email address</label>
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter email"
-            onChange={(e) => inputData("email", e.target.value)}
-          />
-          <p>Check your email.</p>
-        </div>
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            onChange={(e) => inputData("password", e.target.value)}
-          />
-        </div>
-        <div>
-          <label>Confirm Password</label>
-          <input
-            type="password"
-            name="password_confirm"
-            placeholder="Password"
-            onChange={(e) => inputData("password_confirm", e.target.value)}
-          />
-          <p>Check your password.</p>
-        </div>
-        <div>
-          <label>Name</label>
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            onChange={(e) => inputData("name", e.target.value)}
-          />
-        </div>
-        <div>
-          <button type="submit">회원가입</button>
-        </div>
-      </form>
-    </article>
+    <>
+      <Navbar />
+      <Container>
+        <Col>
+          <Form onSubmit={register}>
+            <Form.Group controlId="formBasicEmail">
+              <Form.Label>Email address</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter email"
+                onChange={(e) => inputData("email", e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group controlId="formBasicPassword">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Password"
+                onChange={(e) => inputData("password", e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group controlId="formBasicPasswordConfirm">
+              <Form.Label>Confirm Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Password"
+                onChange={(e) => inputData("password_confirm", e.target.value)}
+              />
+              {input.password !== input.password_confirm && (
+                <Form.Text className="text-muted small">
+                  Check your password.
+                </Form.Text>
+              )}
+            </Form.Group>
+
+            <Form.Group controlId="formBasicName">
+              <Form.Label>Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Name"
+                onChange={(e) => inputData("name", e.target.value)}
+              />
+            </Form.Group>
+            {status === "fail" && (
+              <Form.Text className="text-danger small">{msg}</Form.Text>
+            )}
+            <Form.Row className="justify-content-md-center">
+              <Button variant="primary" type="submit">
+                회원가입
+              </Button>
+            </Form.Row>
+          </Form>
+        </Col>
+      </Container>
+    </>
   );
 }

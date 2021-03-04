@@ -1,25 +1,76 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import Navbar from "./Navbar";
+import axios from "axios";
+import { useHistory, Link } from "react-router-dom";
+import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Login() {
+  const api_url = "http://localhost:5000/";
+  const [input, setInput] = useState({ email: "", password: "" });
+  const [status, setStatus] = useState();
+  const [msg, setMsg] = useState("");
+  let history = useHistory();
+
+  const inputData = (key, data) => {
+    setInput({
+      ...input,
+      [key]: data,
+    });
+  };
+
+  function login(e) {
+    e.preventDefault();
+    const data = { email: input.email, password: input.password };
+    axios.post(api_url + "login", data).then((response) => {
+      console.log(response);
+      localStorage.setItem("token", response.data.access_token);
+      setStatus(response.data.status);
+      setMsg(response.data.result.message);
+    });
+  }
+
+  if (status === "success") {
+    history.push("/main");
+  }
+
   return (
-    <article>
-      <form action="login" method="post">
-        <div>
-          <label>Email address</label>
-          <input type="email" name="email" placeholder="Enter email" />
-        </div>
-        <div>
-          <label>Password</label>
-          <input type="password" name="password" placeholder="Password" />
-        </div>
-        <div>
-          <button type="submit">로그인</button>
-          <Link to="/register">
-            <button>회원가입하기</button>
-          </Link>
-        </div>
-      </form>
-    </article>
+    <>
+      <Navbar />
+      <Container>
+        <Col>
+          <Form onSubmit={login}>
+            <Form.Group controlId="formBasicEmail">
+              <Form.Label>Email address</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter email"
+                onChange={(e) => inputData("email", e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group controlId="formBasicPassword">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Password"
+                onChange={(e) => inputData("password", e.target.value)}
+              />
+            </Form.Group>
+            {status === "fail" && (
+              <Form.Text className="text-danger small">{msg}</Form.Text>
+            )}
+            <Form.Row className="justify-content-md-center">
+              <Button variant="primary" type="submit">
+                로그인
+              </Button>
+            </Form.Row>
+            <Form.Row className="justify-content-md-center mt-3">
+              <Link to="/register">
+                <Button variant="light">회원가입하기</Button>
+              </Link>
+            </Form.Row>
+          </Form>
+        </Col>
+      </Container>
+    </>
   );
 }
