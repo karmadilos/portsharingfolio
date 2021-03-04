@@ -28,7 +28,6 @@ db = pymysql.connect(
     db="elice_racer_portfolio",
     charset="utf8",
 )
-cursor = db.cursor()
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -59,18 +58,34 @@ def register():
             error = "Name이 유효하지 않습니다."
 
         # existing error
-        sql = "SELECT id FROM users WHERE email = %s"
-        cursor.execute(sql, (email,))
-        result = cursor.fetchone()
+        with db.cursor() as cursor:
+            sql = "SELECT id FROM User WHERE email = %s"
+            cursor.execute(sql, (email,))
+            result = cursor.fetchone()
         if result is not None:
             error = "{} 계정은 이미 등록된 계정입니다.".format(email)
 
         # no error occurs, execute
         if error is None:
-            sql = (
-                "INSERT INTO `users` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
-            )
-            cursor.execute(sql, (name, email, generate_password_hash(password)))
+            with db.cursor() as cursor:
+                sql = "INSERT INTO `User` (`name`, `email`, `password`) VALUES (%s, %s, %s)"
+                cursor.execute(sql, (name, email, generate_password_hash(password)))
+            db.commit()
+
+            with db.cursor() as cursor:
+                # find user_id
+                sql = "SELECT id FROM User WHERE email = %s"
+                cursor.execute(sql, (email,))
+                user_id = cursor.fetchone()
+                # update UserInfo
+                sql = "INSERT INTO `UserInfo` (`image_path`, `user_id`) VALUES (%s, %s)"
+                cursor.execute(
+                    sql,
+                    (
+                        "https://thumbs.dreamstime.com/b/default-avatar-profile-image-vector-social-media-user-icon-potrait-182347582.jpg",
+                        user_id,
+                    ),
+                )
             db.commit()
             return jsonify({"status": "success", "message": "등록되었습니다."})
 
@@ -87,14 +102,15 @@ def login():
         error = None
 
         # find from db
-        sql = "SELECT email, password, name FROM users WHERE email = %s"
-        cursor.execute(sql, (email,))
-        user = cursor.fetchone()
+        with db.cursor() as cursor:
+            sql = "SELECT id, email, password, name FROM User WHERE email = %s"
+            cursor.execute(sql, (email,))
+            user = cursor.fetchone()
         # user not found
         if user is None:
             error = "등록되지 않은 계정입니다."
         # password not match
-        if not (user == None or check_password_hash(user[1], password)):
+        if not (user == None or check_password_hash(user[2], password)):
             error = "Password가 틀렸습니다."
 
         # No errors
@@ -105,32 +121,133 @@ def login():
             # session["user_id"] = user[0] --> if session no necessary delete this
 
             # make jwt token
-            access_token = create_access_token(identity=email)
+            access_token = create_access_token(identity=user[0])
             return jsonify(
                 status="success",
                 access_token=access_token,
-                user_name=user[2],
+                user_name=user[3],
                 result={"message": "로그인"},
             )
 
     return jsonify(status="fail", result={"message": error})
 
 
-@app.route("/protected", methods=["GET"])
+@app.route("/main", methods=["GET", "POST"])
 @jwt_required()
-def protected():
+def main():
     # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+
+    if request.method == "POST":
+        data = request.get_json()
+        name = data.get("name")
+        info = data.get("info")
+        # path = data.get("path")
+
+        with db.cursor() as cursor:
+            sql = "UPDATE `User` SET `name` = %s WHERE id = %s"
+            cursor.execute(sql, (name, current_user))
+        db.commit()
+
+        with db.cursor() as cursor:
+            sql = "UPDATE `UserInfo` SET `info` = %s WHERE user_id = %s"
+            cursor.execute(sql, (info, current_user))
+        db.commit()
+
+        return jsonify(logged_in_as=current_user), 200
+
+    with db.cursor() as cursor:
+        sql = "SELECT email, name, image_path, info FROM User JOIN UserInfo ON User.id = UserInfo.user_id WHERE User.id = %s"
+        cursor.execute(sql, current_user)
+        user = cursor.fetchone()
+    return (
+        jsonify(
+            logged_in_as=current_user,
+            email=user[0],
+            name=user[1],
+            image_path=user[2],
+            info=user[3],
+        ),
+        200,
+    )
 
 
 # if not neccessary delete this
-# @app.route("/logout", methods=["GET", "POST"])
+# @app.route("/logout", methods=["GET"])
 # def logout():
-#     session.clear()
+#     db.close()
 #     return jsonify(status="success", result={"message": "로그아웃 되었습니다."})
 
 
+parser = reqparse.RequestParser()
+parser.add_argument("id")
+parser.add_argument("college")
+parser.add_argument("major")
+parser.add_argument("degree")
+
+
+class Education(Resource):
+    @jwt_required()
+    def get(self, user_id=None):
+        current_id = get_jwt_identity()
+
+        if not user_id:
+            with db.cursor() as cursor:
+                sql = "SELECT id, college, major, degree FROM `Education` WHERE user_id = %s"
+                cursor.execute(sql, current_id)
+                result = cursor.fetchall()
+            return jsonify(status="success", result=result)
+
+    @jwt_required()
+    def post(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        if args["college"] != "" and args["major"] != "":
+            with db.cursor() as cursor:
+                sql = "INSERT INTO `Education` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
+                cursor.execute(
+                    sql, (args["college"], args["major"], args["degree"], current_id)
+                )
+            db.commit()
+
+        return jsonify(status="success")
+
+    @jwt_required()
+    def put(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        with db.cursor() as cursor:
+            sql = "UPDATE `Education` SET college = %s, major = %s, degree = %s WHERE `id` = %s AND `user_id` = %s"
+            cursor.execute(
+                sql,
+                (
+                    args["college"],
+                    args["major"],
+                    args["degree"],
+                    args["id"],
+                    current_id,
+                ),
+            )
+        db.commit()
+
+        return jsonify(status="success")
+
+    @jwt_required()
+    def delete(self):
+        args = parser.parse_args()
+        print(args["id"])
+
+        with db.cursor() as cursor:
+            sql = "DELETE FROM `Education` WHERE `id` = %s"
+            cursor.execute(sql, (args["id"],))
+        db.commit()
+
+        return jsonify(status="success")
+
+
+api.add_resource(Education, "/education", "/education/<user_id>")
+
 if __name__ == "__main__":
     app.run("0.0.0.0", port=5000, debug=True)
-    # app.run("0.0.0.0", port=80, debug=True)

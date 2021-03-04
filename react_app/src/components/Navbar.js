@@ -23,7 +23,7 @@ export default function Navbar() {
             </Nav.Link>
           </Nav.Item>
         </Col>
-        {token ? (
+        {token && token !== "undefined" ? (
           <>
             <Nav.Item>
               <Nav.Link as={Link} to="/main">
