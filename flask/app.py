@@ -237,7 +237,6 @@ class Education(Resource):
     @jwt_required()
     def delete(self):
         args = parser.parse_args()
-        print(args["id"])
 
         with db.cursor() as cursor:
             sql = "DELETE FROM `Education` WHERE `id` = %s"
@@ -248,6 +247,64 @@ class Education(Resource):
 
 
 api.add_resource(Education, "/education", "/education/<user_id>")
+
+
+parser.add_argument("title")
+parser.add_argument("description")
+
+
+class Awards(Resource):
+    @jwt_required()
+    def get(self, user_id=None):
+        current_id = get_jwt_identity()
+
+        if not user_id:
+            with db.cursor() as cursor:
+                sql = "SELECT id, title, description FROM `Awards` WHERE user_id = %s"
+                cursor.execute(sql, current_id)
+                result = cursor.fetchall()
+            return jsonify(status="success", result=result)
+
+    @jwt_required()
+    def post(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        if args["title"] != "":
+            with db.cursor() as cursor:
+                sql = "INSERT INTO `Awards` (`title`, `description`, `user_id`) VALUES (%s, %s, %s)"
+                cursor.execute(sql, (args["title"], args["description"], current_id))
+            db.commit()
+
+        return jsonify(status="success")
+
+    @jwt_required()
+    def put(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
+
+        with db.cursor() as cursor:
+            sql = "UPDATE `Awards` SET title = %s, description = %s WHERE `id` = %s AND `user_id` = %s"
+            cursor.execute(
+                sql, (args["title"], args["description"], args["id"], current_id,),
+            )
+        db.commit()
+
+        return jsonify(status="success")
+
+    @jwt_required()
+    def delete(self):
+        args = parser.parse_args()
+
+        with db.cursor() as cursor:
+            sql = "DELETE FROM `Awards` WHERE `id` = %s"
+            cursor.execute(sql, (args["id"],))
+        db.commit()
+
+        return jsonify(status="success")
+
+
+api.add_resource(Awards, "/awards", "/awards/<user_id>")
 
 if __name__ == "__main__":
     app.run("0.0.0.0", port=5000, debug=True)

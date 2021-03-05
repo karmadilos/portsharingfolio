@@ -31,28 +31,31 @@ export default function Education() {
 
   const collegList = output.map((edu) => (
     <Card.Text>
-      <Row>
+      <Row className="justify-content-between align-items-center row">
         <Col>
-          {edu[1]} {edu[2]} ({position[edu[3]]})
+          {edu[1]}
+          <br />
+          <span className="text-muted">
+            {edu[2]} ({position[edu[3]]})
+          </span>
         </Col>
-        <Col xs lg="2">
-          <Button
-            type="button"
-            variant="link"
-            onClick={() => {
-              setIsToggled(true);
-              setOption("edit");
-              setInput({
-                id: edu[0],
-                college: edu[1],
-                major: edu[2],
-                degree: edu[3],
-              });
-            }}
-          >
-            Edit
-          </Button>
-        </Col>
+        <Button
+          type="button"
+          variant="link"
+          className="btn-sm mr-3"
+          onClick={() => {
+            setIsToggled(true);
+            setOption("edit");
+            setInput({
+              id: edu[0],
+              college: edu[1],
+              major: edu[2],
+              degree: edu[3],
+            });
+          }}
+        >
+          Edit
+        </Button>
       </Row>
     </Card.Text>
   ));
@@ -157,7 +160,7 @@ export default function Education() {
               ></Form.Check>
             </div>
             <Form.Row className="justify-content-md-center">
-              <Button className="mr-2" type="submit" variant="primary">
+              <Button className="mr-2" type="submit">
                 확인
               </Button>
               {option === "edit" && (
