@@ -1,5 +1,5 @@
 import React from "react";
-import { useHistory, Link } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import { Nav, Col } from "react-bootstrap/";
 
 export default function Navbar() {
@@ -26,12 +26,10 @@ export default function Navbar() {
         {token && token !== "undefined" ? (
           <>
             <Nav.Item>
-              <Nav.Link as={Link} to="/main">
-                메인
-              </Nav.Link>
+              <Nav.Link onClick={() => history.push("/main")}>메인</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link as={Link} to="/network">
+              <Nav.Link onClick={() => history.push("/network")}>
                 네트워크
               </Nav.Link>
             </Nav.Item>
@@ -42,9 +40,7 @@ export default function Navbar() {
         ) : (
           <>
             <Nav.Item>
-              <Nav.Link as={Link} to="/">
-                메인
-              </Nav.Link>
+              <Nav.Link onClick={() => history.push("/")}>메인</Nav.Link>
             </Nav.Item>
             <Nav.Item>
               <Nav.Link eventKey="disabled">네트워크</Nav.Link>

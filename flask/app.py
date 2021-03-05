@@ -77,7 +77,7 @@ def register():
                 sql,
                 (
                     "https://thumbs.dreamstime.com/b/default-avatar-profile-image-vector-social-media-user-icon-potrait-182347582.jpg",
-                    user_id,
+                    user_id["id"],
                 ),
             )
             db.commit()
@@ -157,6 +157,19 @@ def main():
         ),
         200,
     )
+
+
+@app.route("/network", methods=["GET"])
+@jwt_required()
+def network():
+    # Access the identity of the current user with get_jwt_identity
+    current_id = get_jwt_identity()
+
+    with db.cursor(DictCursor) as cursor:
+        sql = "SELECT email, name, image_path, info, users.id FROM users JOIN userinfo ON users.id = userinfo.user_id"
+        cursor.execute(sql,)
+        user = cursor.fetchall()
+    return jsonify(status="success", user=user)
 
 
 parser = reqparse.RequestParser()
