@@ -8,12 +8,11 @@ from flask_jwt_extended import (
     jwt_required,
     JWTManager,
 )
-import pymysql
-from pymysql.cursors import DictCursor
 
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
 
+from pymysql.cursors import DictCursor
 from db import db
 
 app = Flask(__name__)
@@ -119,44 +118,49 @@ def login():
     return jsonify(status="fail", result={"message": error})
 
 
-@app.route("/main", methods=["GET", "PATCH"])
-@jwt_required()
-def main():
-    # Access the identity of the current user with get_jwt_identity
-    current_id = get_jwt_identity()
+parser = reqparse.RequestParser()
+parser.add_argument("name")
+parser.add_argument("info")
+parser.add_argument("path")
 
-    if request.method == "PATCH":
-        data = request.get_json()
-        name = data.get("name")
-        info = data.get("info")
+
+class Main(Resource):
+    @jwt_required()
+    def get(self, user_id=None):
+        current_id = get_jwt_identity()
+        if not user_id:
+            with db.cursor(DictCursor) as cursor:
+                sql = "SELECT email, name, image_path, info FROM users JOIN userinfo ON users.id = userinfo.user_id WHERE users.id = %s"
+                cursor.execute(sql, (current_id,))
+                user = cursor.fetchone()
+            return jsonify(status="success", user=user, logged_in_as=current_id)
+
+        with db.cursor(DictCursor) as cursor:
+            sql = "SELECT email, name, image_path, info FROM users JOIN userinfo ON users.id = userinfo.user_id WHERE users.id = %s"
+            cursor.execute(sql, (user_id,))
+            user = cursor.fetchone()
+        return jsonify(status="success", user=user, logged_in_as=current_id)
+
+    @jwt_required()
+    def patch(self):
+        current_id = get_jwt_identity()
+        args = parser.parse_args()
         # path = data.get("path")
 
         with db.cursor(DictCursor) as cursor:
             sql = "UPDATE `users` SET `name` = %s WHERE id = %s"
-            cursor.execute(sql, (name, current_id))
+            cursor.execute(sql, (args["name"], current_id))
             db.commit()
 
         with db.cursor(DictCursor) as cursor:
             sql = "UPDATE `userinfo` SET `info` = %s WHERE user_id = %s"
-            cursor.execute(sql, (info, current_id))
+            cursor.execute(sql, (args["info"], current_id))
             db.commit()
 
-        return jsonify(logged_in_as=current_id), 200
+        return jsonify(status="success", logged_in_as=current_id)
 
-    with db.cursor(DictCursor) as cursor:
-        sql = "SELECT email, name, image_path, info FROM users JOIN userinfo ON users.id = userinfo.user_id WHERE users.id = %s"
-        cursor.execute(sql, (current_id,))
-        user = cursor.fetchone()
-    return (
-        jsonify(
-            logged_in_as=current_id,
-            email=user["email"],
-            name=user["name"],
-            image_path=user["image_path"],
-            info=user["info"],
-        ),
-        200,
-    )
+
+api.add_resource(Main, "/main", "/main/<user_id>")
 
 
 @app.route("/network", methods=["GET"])
@@ -172,7 +176,6 @@ def network():
     return jsonify(status="success", user=user)
 
 
-parser = reqparse.RequestParser()
 parser.add_argument("id")
 parser.add_argument("college")
 parser.add_argument("major")

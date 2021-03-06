@@ -30,7 +30,7 @@ export default function Education() {
     });
   }, [check]);
 
-  const collegList = output.map((edu, index) => (
+  const collegeList = output.map((edu, index) => (
     <Card.Text key={index}>
       <Row className="justify-content-between align-items-center row">
         <Col>
@@ -112,7 +112,7 @@ export default function Education() {
     <Card className="mb-2">
       <Card.Body>
         <Card.Title>학력</Card.Title>
-        {collegList}
+        {collegeList}
         {isToggled && (
           <Form onSubmit={add}>
             <Form.Group controlId="formBasicSchool">
