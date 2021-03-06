@@ -7,7 +7,7 @@ import { Button, Container, Col, Form } from "react-bootstrap/";
 export default function Login() {
   const api_url = process.env.REACT_APP_API_URL;
   const [input, setInput] = useState({ email: "", password: "" });
-  const [status, setStatus] = useState();
+  const [status, setStatus] = useState("");
   const [msg, setMsg] = useState("");
   let history = useHistory();
 
@@ -46,6 +46,7 @@ export default function Login() {
               <Form.Control
                 type="email"
                 placeholder="Enter email"
+                value={input.email}
                 onChange={(e) => inputData("email", e.target.value)}
               />
             </Form.Group>

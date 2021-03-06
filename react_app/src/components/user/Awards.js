@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
 
-export default function Awards() {
+export default function Awards({ isEdittable, user_id }) {
   const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
@@ -16,6 +16,7 @@ export default function Awards() {
     description: "",
   });
   const [output, setOutput] = useState([]);
+  const [status, setStatus] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
 
@@ -23,10 +24,16 @@ export default function Awards() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "awards", options).then((response) => {
-      setOutput(response.data.result);
-    });
-  }, [check]);
+    if (user_id === undefined) {
+      axios.get(api_url + "awards", options).then((response) => {
+        setOutput(response.data.result);
+      });
+    } else {
+      axios.get(api_url + `awards/${user_id}`, options).then((response) => {
+        setOutput(response.data.result);
+      });
+    }
+  }, [check, user_id]);
 
   const awardsList = output.map((award, index) => (
     <Card.Text key={index}>
@@ -36,22 +43,24 @@ export default function Awards() {
           <br />
           <span className="text-muted">{award["description"]}</span>
         </Col>
-        <Button
-          type="button"
-          variant="link"
-          className="btn-sm mr-3"
-          onClick={() => {
-            setIsToggled(true);
-            setOption("edit");
-            setInput({
-              id: award["id"],
-              title: award["title"],
-              description: award["description"],
-            });
-          }}
-        >
-          Edit
-        </Button>
+        {isEdittable && (
+          <Button
+            type="button"
+            variant="link"
+            className="btn-sm mr-3"
+            onClick={() => {
+              setIsToggled(true);
+              setOption("edit");
+              setInput({
+                id: award["id"],
+                title: award["title"],
+                description: award["description"],
+              });
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Row>
     </Card.Text>
   ));
@@ -75,17 +84,26 @@ export default function Awards() {
     };
 
     if (option === "add") {
-      axios.post(api_url + "awards", data, options);
-      setIsToggled(false);
-      setCheck(check + 1);
-      setInput({ title: "", description: "" });
+      axios.post(api_url + "awards", data, options).then((response) => {
+        setStatus(response.data);
+      });
     } else if (option === "edit") {
-      axios.patch(api_url + "awards", data, options);
+      axios.patch(api_url + "awards", data, options).then((response) => {
+        setStatus(response.data);
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+    if (status.status === "success") {
       setIsToggled(false);
       setCheck(check + 1);
       setInput({ title: "", description: "" });
     }
-  }
+  }, [status]);
 
   function clear(e) {
     e.preventDefault();
@@ -127,6 +145,11 @@ export default function Awards() {
                 onChange={(e) => inputData("description", e.target.value)}
               />
             </Form.Group>
+            {status.status === "fail" && (
+              <Form.Text className="text-danger small mb-3">
+                {status.result.message}
+              </Form.Text>
+            )}
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -168,18 +191,20 @@ export default function Awards() {
             </Form.Row>
           </Form>
         )}
-        <Row className="justify-content-md-center mt-3">
-          <Button
-            type="button"
-            onClick={() => {
-              setIsToggled(true);
-              setInput({ title: "", description: "" });
-              setOption("add");
-            }}
-          >
-            +
-          </Button>
-        </Row>
+        {isEdittable && (
+          <Row className="justify-content-md-center mt-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setIsToggled(true);
+                setInput({ title: "", description: "" });
+                setOption("add");
+              }}
+            >
+              +
+            </Button>
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
 
-export default function Education() {
+export default function Education({ isEdittable, user_id }) {
   const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
@@ -14,9 +14,10 @@ export default function Education() {
     id: 0,
     college: "",
     major: "",
-    degree: 0,
+    degree: -1,
   });
   const [output, setOutput] = useState([]);
+  const [status, setStatus] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
   const position = { 0: "재학중", 1: "학사졸업", 2: "석사졸업", 3: "박사졸업" };
@@ -25,10 +26,16 @@ export default function Education() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "education", options).then((response) => {
-      setOutput(response.data.result);
-    });
-  }, [check]);
+    if (user_id === undefined) {
+      axios.get(api_url + "education", options).then((response) => {
+        setOutput(response.data.result);
+      });
+    } else {
+      axios.get(api_url + `education/${user_id}`, options).then((response) => {
+        setOutput(response.data.result);
+      });
+    }
+  }, [check, user_id]);
 
   const collegeList = output.map((edu, index) => (
     <Card.Text key={index}>
@@ -40,23 +47,25 @@ export default function Education() {
             {edu["major"]} ({position[edu["degree"]]})
           </span>
         </Col>
-        <Button
-          type="button"
-          variant="link"
-          className="btn-sm mr-3"
-          onClick={() => {
-            setIsToggled(true);
-            setOption("edit");
-            setInput({
-              id: edu["id"],
-              college: edu["college"],
-              major: edu["major"],
-              degree: edu["degree"],
-            });
-          }}
-        >
-          Edit
-        </Button>
+        {isEdittable && (
+          <Button
+            type="button"
+            variant="link"
+            className="btn-sm mr-3"
+            onClick={() => {
+              setIsToggled(true);
+              setOption("edit");
+              setInput({
+                id: edu["id"],
+                college: edu["college"],
+                major: edu["major"],
+                degree: edu["degree"],
+              });
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Row>
     </Card.Text>
   ));
@@ -81,17 +90,26 @@ export default function Education() {
     };
 
     if (option === "add") {
-      axios.post(api_url + "education", data, options);
-      setIsToggled(false);
-      setCheck(check + 1);
-      setInput({ college: "", major: "", degree: 0 });
+      axios.post(api_url + "education", data, options).then((response) => {
+        setStatus(response.data);
+      });
     } else if (option === "edit") {
-      axios.patch(api_url + "education", data, options);
-      setIsToggled(false);
-      setCheck(check + 1);
-      setInput({ college: "", major: "", degree: 0 });
+      axios.patch(api_url + "education", data, options).then((response) => {
+        setStatus(response.data);
+      });
     }
   }
+
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+    if (status.status === "success") {
+      setIsToggled(false);
+      setCheck(check + 1);
+      setInput({ college: "", major: "", degree: -1 });
+    }
+  }, [status]);
 
   function clear(e) {
     e.preventDefault();
@@ -105,7 +123,7 @@ export default function Education() {
     setShow(false);
     setIsToggled(false);
     setCheck(check - 1);
-    setInput({ college: "", major: "", degree: 0 });
+    setInput({ college: "", major: "", degree: -1 });
   }
 
   return (
@@ -163,6 +181,11 @@ export default function Education() {
                 onChange={(e) => inputData("degree", 3)}
               ></Form.Check>
             </div>
+            {status.status === "fail" && (
+              <Form.Text className="text-danger small mb-3">
+                {status.result.message}
+              </Form.Text>
+            )}
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -204,18 +227,20 @@ export default function Education() {
             </Form.Row>
           </Form>
         )}
-        <Row className="justify-content-md-center mt-3">
-          <Button
-            type="button"
-            onClick={() => {
-              setIsToggled(true);
-              setInput({ college: "", major: "", degree: 0 });
-              setOption("add");
-            }}
-          >
-            +
-          </Button>
-        </Row>
+        {isEdittable && (
+          <Row className="justify-content-md-center mt-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setIsToggled(true);
+                setInput({ college: "", major: "", degree: -1 });
+                setOption("add");
+              }}
+            >
+              +
+            </Button>
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );

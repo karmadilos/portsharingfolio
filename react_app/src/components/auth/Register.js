@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Navbar from "./Navbar";
 import axios from "axios";
 import { useHistory } from "react-router-dom";
-import { Button, Container, Col, Form } from "react-bootstrap/";
+import { Button, Container, Col, Form, Row } from "react-bootstrap/";
 
 export default function Register() {
   const api_url = process.env.REACT_APP_API_URL;
@@ -93,6 +93,11 @@ export default function Register() {
               </Button>
             </Form.Row>
           </Form>
+          <Row className="justify-content-md-center mt-3">
+            <a href="#" onClick={() => history.push("/")}>
+              이미 아이디가 있습니까?
+            </a>
+          </Row>
         </Col>
       </Container>
     </>

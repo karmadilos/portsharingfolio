@@ -3,8 +3,9 @@ import axios from "axios";
 import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import moment from "moment";
 
-export default function Certificate() {
+export default function Certificate({ isEdittable, user_id }) {
   const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
@@ -13,7 +14,6 @@ export default function Certificate() {
     },
   };
 
-  const moment = require("moment");
   const [input, setInput] = useState({
     id: 0,
     title: "",
@@ -21,6 +21,7 @@ export default function Certificate() {
     acquisition_date: new Date(),
   });
   const [output, setOutput] = useState([]);
+  const [status, setStatus] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
 
@@ -28,10 +29,18 @@ export default function Certificate() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "certificates", options).then((response) => {
-      setOutput(response.data.result);
-    });
-  }, [check]);
+    if (user_id === undefined) {
+      axios.get(api_url + "certificates", options).then((response) => {
+        setOutput(response.data.result);
+      });
+    } else {
+      axios
+        .get(api_url + `certificates/${user_id}`, options)
+        .then((response) => {
+          setOutput(response.data.result);
+        });
+    }
+  }, [check, user_id]);
 
   const certificatesList = output.map((certificate, index) => (
     <Card.Text key={index}>
@@ -45,23 +54,25 @@ export default function Certificate() {
             {moment(certificate["acquisition_date"]).format("yyyy-MM-DD")}
           </span>
         </Col>
-        <Button
-          type="button"
-          variant="link"
-          className="btn-sm mr-3"
-          onClick={() => {
-            setIsToggled(true);
-            setOption("edit");
-            setInput({
-              id: certificate["id"],
-              title: certificate["title"],
-              description: certificate["description"],
-              acquisition_date: new Date(certificate["acquisition_date"]),
-            });
-          }}
-        >
-          Edit
-        </Button>
+        {isEdittable && (
+          <Button
+            type="button"
+            variant="link"
+            className="btn-sm mr-3"
+            onClick={() => {
+              setIsToggled(true);
+              setOption("edit");
+              setInput({
+                id: certificate["id"],
+                title: certificate["title"],
+                description: certificate["description"],
+                acquisition_date: new Date(certificate["acquisition_date"]),
+              });
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Row>
     </Card.Text>
   ));
@@ -86,16 +97,21 @@ export default function Certificate() {
     };
 
     if (option === "add") {
-      axios.post(api_url + "certificates", data, options);
-      setIsToggled(false);
-      setCheck(check + 1);
-      setInput({
-        title: "",
-        description: "",
-        acquisition_date: new Date(),
+      axios.post(api_url + "certificates", data, options).then((response) => {
+        setStatus(response.data);
       });
     } else if (option === "edit") {
-      axios.patch(api_url + "certificates", data, options);
+      axios.patch(api_url + "certificates", data, options).then((response) => {
+        setStatus(response.data);
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+    if (status.status === "success") {
       setIsToggled(false);
       setCheck(check + 1);
       setInput({
@@ -104,7 +120,7 @@ export default function Certificate() {
         acquisition_date: new Date(),
       });
     }
-  }
+  }, [status]);
 
   function clear(e) {
     e.preventDefault();
@@ -160,6 +176,11 @@ export default function Certificate() {
                 />
               </Col>
             </Form.Row>
+            {status.status === "fail" && (
+              <Form.Text className="text-danger small mb-3">
+                {status.result.message}
+              </Form.Text>
+            )}
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -205,22 +226,24 @@ export default function Certificate() {
             </Form.Row>
           </Form>
         )}
-        <Row className="justify-content-md-center mt-3">
-          <Button
-            type="button"
-            onClick={() => {
-              setIsToggled(true);
-              setInput({
-                title: "",
-                description: "",
-                acquisition_date: new Date(),
-              });
-              setOption("add");
-            }}
-          >
-            +
-          </Button>
-        </Row>
+        {isEdittable && (
+          <Row className="justify-content-md-center mt-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setIsToggled(true);
+                setInput({
+                  title: "",
+                  description: "",
+                  acquisition_date: new Date(),
+                });
+                setOption("add");
+              }}
+            >
+              +
+            </Button>
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );

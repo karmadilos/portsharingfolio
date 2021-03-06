@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     jwt_required,
     JWTManager,
 )
+import re
 
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
@@ -22,6 +23,11 @@ app.config.from_mapping(SECRET_KEY="dev")
 app.config["JWT_SECRET_KEY"] = "super-secret"
 jwt = JWTManager(app)
 
+email_re = re.compile("^[\w]+[.]?[\w]+[@][\w]+[.][\w]+")
+password_re = re.compile(r"(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[^\w\s]).*")
+english_re = re.compile("^[a-zA-Z]*$")
+korean_re = re.compile("^[가-힣]*$")
+
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -34,12 +40,16 @@ def register():
     error = None
 
     # email error
-    if not email:
+    if not email or not email_re.match(email):
         error = "Email이 유효하지 않습니다."
 
     # password error
     elif not password:
         error = "Password가 유효하지 않습니다."
+    elif len(password) < 8:
+        error = "Password는 8자리 이상이어야 합니다."
+    elif not password_re.match(password):
+        error = "Password는 영문, 숫자, 특수문자 중 3종류 이상을 조합하여 구성하여야 합니다."
     # different password
     elif password != password_confirm:
         error = "Password가 일치하지 않습니다."
@@ -47,6 +57,8 @@ def register():
     # name error
     elif not name:
         error = "Name이 유효하지 않습니다."
+    elif not english_re.match(name) and not korean_re.match(name):
+        error = "Name은 한글 또는 영어로만 입력하여야 합니다."
 
     # existing error
     with db.cursor(DictCursor) as cursor:
@@ -97,8 +109,10 @@ def login():
         cursor.execute(sql, (email,))
         user = cursor.fetchone()
 
+    if not email_re.match(email):
+        error = "ID는 Email 형식이어야 합니다."
     # user not found
-    if user is None:
+    elif user is None:
         error = "등록되지 않은 계정입니다."
     # password not match
     if not (user == None or check_password_hash(user["password"], password)):
@@ -145,29 +159,46 @@ class Main(Resource):
     def patch(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
-        # path = data.get("path")
+        error = None
 
-        with db.cursor(DictCursor) as cursor:
-            sql = "UPDATE `users` SET `name` = %s WHERE id = %s"
-            cursor.execute(sql, (args["name"], current_id))
-            db.commit()
+        # name error
+        if not args["name"]:
+            error = "Name이 유효하지 않습니다."
+        elif not english_re.match(args["name"]) and not korean_re.match(args["name"]):
+            error = "Name은 한글 또는 영어로만 입력하여야 합니다."
 
-        with db.cursor(DictCursor) as cursor:
-            sql = "UPDATE `userinfo` SET `info` = %s WHERE user_id = %s"
-            cursor.execute(sql, (args["info"], current_id))
-            db.commit()
+        if error is None:
+            with db.cursor(DictCursor) as cursor:
+                sql = "UPDATE `users` SET `name` = %s WHERE id = %s"
+                cursor.execute(sql, (args["name"], current_id))
+                db.commit()
 
-        return jsonify(status="success", logged_in_as=current_id)
+            with db.cursor(DictCursor) as cursor:
+                sql = "UPDATE `userinfo` SET `info` = %s WHERE user_id = %s"
+                cursor.execute(sql, (args["info"], current_id))
+                db.commit()
+
+            return jsonify(status="success", logged_in_as=current_id)
+
+        return jsonify(status="fail", result={"message": error})
 
 
 api.add_resource(Main, "/main", "/main/<user_id>")
 
 
-@app.route("/network", methods=["GET"])
+@app.route("/network", methods=["GET", "POST"])
 @jwt_required()
 def network():
     # Access the identity of the current user with get_jwt_identity
     current_id = get_jwt_identity()
+    if request.method == "POST":
+        data = request.get_json()
+        searchname = data.get("searchname")
+        with db.cursor(DictCursor) as cursor:
+            sql = f"""SELECT email, name, image_path, info, users.id FROM users JOIN userinfo ON users.id = userinfo.user_id WHERE name LIKE '%{searchname}%' """
+            cursor.execute(sql,)
+            user = cursor.fetchall()
+        return jsonify(status="success", user=user)
 
     with db.cursor(DictCursor) as cursor:
         sql = "SELECT email, name, image_path, info, users.id FROM users JOIN userinfo ON users.id = userinfo.user_id"
@@ -194,12 +225,30 @@ class Education(Resource):
                 result = cursor.fetchall()
             return jsonify(status="success", result=result)
 
+        with db.cursor(DictCursor) as cursor:
+            sql = (
+                "SELECT id, college, major, degree FROM `educations` WHERE user_id = %s"
+            )
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchall()
+        return jsonify(status="success", result=result)
+
     @jwt_required()
     def post(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["college"] != "" and args["major"] != "":
+        if not args["college"]:
+            error = "학교 이름은 필수 입력값입니다."
+
+        elif not args["major"]:
+            error = "전공은 필수 입력값입니다."
+
+        elif args["degree"] == "-1":
+            error = "학위는 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "INSERT INTO `educations` (`college`, `major`, `degree`, `user_id`) VALUES (%s, %s, %s, %s)"
                 cursor.execute(
@@ -207,14 +256,24 @@ class Education(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def patch(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["college"] != "" and args["major"] != "":
+        if not args["college"]:
+            error = "학교 이름은 필수 입력값입니다."
+
+        elif not args["major"]:
+            error = "전공은 필수 입력값입니다."
+
+        elif args["degree"] == -1:
+            error = "학위는 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "UPDATE `educations` SET college = %s, major = %s, degree = %s WHERE `id` = %s AND `user_id` = %s"
                 cursor.execute(
@@ -229,7 +288,7 @@ class Education(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def delete(self):
@@ -261,25 +320,39 @@ class Awards(Resource):
                 result = cursor.fetchall()
             return jsonify(status="success", result=result)
 
+        with db.cursor(DictCursor) as cursor:
+            sql = "SELECT id, title, description FROM `awards` WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchall()
+        return jsonify(status="success", result=result)
+
     @jwt_required()
     def post(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "수상내역은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "INSERT INTO `awards` (`title`, `description`, `user_id`) VALUES (%s, %s, %s)"
                 cursor.execute(sql, (args["title"], args["description"], current_id))
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def patch(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "수상내역은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "UPDATE `awards` SET title = %s, description = %s WHERE `id` = %s AND `user_id` = %s"
                 cursor.execute(
@@ -287,7 +360,7 @@ class Awards(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def delete(self):
@@ -319,12 +392,22 @@ class Projects(Resource):
                 result = cursor.fetchall()
             return jsonify(status="success", result=result)
 
+        with db.cursor(DictCursor) as cursor:
+            sql = "SELECT id, title, description, startdate, enddate FROM `projects` WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchall()
+        return jsonify(status="success", result=result)
+
     @jwt_required()
     def post(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "프로젝트 제목은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "INSERT INTO `projects` (`title`, `description`, `startdate`, `enddate`, `user_id`) VALUES (%s, %s, %s, %s, %s)"
                 cursor.execute(
@@ -339,14 +422,18 @@ class Projects(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def patch(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "프로젝트 제목은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "UPDATE `projects` SET title = %s, description = %s, startdate = %s, enddate= %s WHERE `id` = %s AND `user_id` = %s"
                 cursor.execute(
@@ -362,7 +449,7 @@ class Projects(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def delete(self):
@@ -393,12 +480,22 @@ class Certificates(Resource):
                 result = cursor.fetchall()
             return jsonify(status="success", result=result)
 
+        with db.cursor(DictCursor) as cursor:
+            sql = "SELECT id, title, description, acquisition_date FROM `certificates` WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchall()
+        return jsonify(status="success", result=result)
+
     @jwt_required()
     def post(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "자격증 제목은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "INSERT INTO `certificates` (`title`, `description`, `acquisition_date`, `user_id`) VALUES (%s, %s, %s, %s)"
                 cursor.execute(
@@ -412,14 +509,18 @@ class Certificates(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def patch(self):
         current_id = get_jwt_identity()
         args = parser.parse_args()
+        error = None
 
-        if args["title"] != "":
+        if not args["title"]:
+            error = "자격증 제목은 필수 입력값입니다."
+
+        if error is None:
             with db.cursor(DictCursor) as cursor:
                 sql = "UPDATE `certificates` SET title = %s, description = %s, acquisition_date = %s WHERE `id` = %s AND `user_id` = %s"
                 cursor.execute(
@@ -434,7 +535,7 @@ class Certificates(Resource):
                 )
                 db.commit()
             return jsonify(status="success")
-        return jsonify(status="fail")
+        return jsonify(status="fail", result={"message": error})
 
     @jwt_required()
     def delete(self):

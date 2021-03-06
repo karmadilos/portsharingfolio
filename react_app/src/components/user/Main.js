@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useHistory, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../auth/Navbar";
 import Education from "./Education";
@@ -16,6 +16,7 @@ export default function Main() {
       Authorization: `Bearer ${token}`,
     },
   };
+  let history = useHistory();
   const params = useParams();
   const user_id = params.user_id;
   const [loggedin, setLoggedin] = useState();
@@ -30,6 +31,9 @@ export default function Main() {
   const [isEdittable, setIsEdittable] = useState(false);
 
   useEffect(() => {
+    if (!token || token === "undefined") {
+      history.replace("/");
+    }
     if (user_id === undefined) {
       axios.get(api_url + `main`, options).then((response) => {
         setOutput(response.data.user);
@@ -42,7 +46,7 @@ export default function Main() {
         setLoggedin(response.data.logged_in_as);
       });
     }
-  }, [user_id]);
+  }, [isToggled, user_id]);
 
   useEffect(() => {
     if (loggedin === parseInt(user_id)) {
@@ -97,10 +101,10 @@ export default function Main() {
             </Card>
           </Col>
           <Col>
-            <Education />
-            <Awards />
-            <Project />
-            <Certificate />
+            <Education isEdittable={isEdittable} user_id={user_id} />
+            <Awards isEdittable={isEdittable} user_id={user_id} />
+            <Project isEdittable={isEdittable} user_id={user_id} />
+            <Certificate isEdittable={isEdittable} user_id={user_id} />
           </Col>
         </Row>
       </Container>
@@ -116,6 +120,7 @@ function MainForm({ output, setOutput, isToggled, setIsToggled }) {
       Authorization: `Bearer ${token}`,
     },
   };
+  const [status, setStatus] = useState([]);
 
   function updateImg(e) {
     e.preventDefault();
@@ -136,9 +141,19 @@ function MainForm({ output, setOutput, isToggled, setIsToggled }) {
       info: output.info,
       // image_path: output.image_path
     };
-    axios.patch(api_url + "main", data, options);
-    setIsToggled(false);
+    axios.patch(api_url + "main", data, options).then((response) => {
+      setStatus(response.data);
+    });
   }
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+    if (status.status === "success") {
+      setIsToggled(false);
+    }
+  }, [status]);
+
   return (
     <Card.Body>
       <Form onSubmit={edit}>
@@ -159,14 +174,6 @@ function MainForm({ output, setOutput, isToggled, setIsToggled }) {
               onClick={updateImg}
             />
           </Row>
-          {/* <Form.File
-                          id="custom-file"
-                          label="Select file"
-                          accept="image/jpeg, image/jpg, image/PNG, image/GIF, image/TIF"
-                          lang="en"
-                          custom
-                          onChange={(e) => setPath(e.target.files[0])}
-                        /> */}
         </Form.Group>
         <Form.Group controlId="formBasicName">
           <Form.Control
@@ -185,6 +192,11 @@ function MainForm({ output, setOutput, isToggled, setIsToggled }) {
             onChange={(e) => inputData("info", e.target.value)}
           />
         </Form.Group>
+        {status.status === "fail" && (
+          <Form.Text className="text-danger small mb-3">
+            {status.result.message}
+          </Form.Text>
+        )}
         <Form.Row className="justify-content-md-center">
           <Button className="mr-2" type="submit" variant="primary">
             확인

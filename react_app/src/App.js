@@ -8,6 +8,10 @@ import { BrowserRouter, Route, Switch } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
+  window.addEventListener("beforeunload", (e) => {
+    e.preventDefault();
+    localStorage.removeItem("token");
+  });
   return (
     <BrowserRouter>
       <div>
