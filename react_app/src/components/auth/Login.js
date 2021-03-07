@@ -1,14 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import axios from "axios";
 import { useHistory, Link } from "react-router-dom";
 import { Button, Container, Col, Form } from "react-bootstrap/";
 
 export default function Login() {
-  const api_url =
-    "http://elice-kdt-ai-track-vm-racer-36.koreacentral.cloudapp.azure.com:5000/";
+  const api_url = process.env.REACT_APP_API_URL;
   const [input, setInput] = useState({ email: "", password: "" });
-  const [status, setStatus] = useState();
+  const [status, setStatus] = useState("");
   const [msg, setMsg] = useState("");
   let history = useHistory();
 
@@ -29,9 +28,12 @@ export default function Login() {
     });
   }
 
-  if (status === "success") {
-    history.push("/main");
-  }
+  useEffect(() => {
+    if (!status) return;
+    if (status === "success") {
+      history.push("/main");
+    }
+  }, [status]);
 
   return (
     <>
@@ -44,6 +46,7 @@ export default function Login() {
               <Form.Control
                 type="email"
                 placeholder="Enter email"
+                value={input.email}
                 onChange={(e) => inputData("email", e.target.value)}
               />
             </Form.Group>

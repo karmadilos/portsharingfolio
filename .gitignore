@@ -1,2 +1,6 @@
 .vscode
+<<<<<<< HEAD
 flask/__pycache__
+=======
+__pycache__
+>>>>>>> cfef38fa395e4ab2f745aecae083c0757b7faa57
