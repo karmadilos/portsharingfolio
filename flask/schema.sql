@@ -13,8 +13,8 @@ CREATE table IF NOT EXISTS userinfo (
     info TEXT,
     user_id INT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY(user_id) REFERENCES users(id),
     UNIQUE(user_id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
 );
 
@@ -25,7 +25,7 @@ CREATE table IF NOT EXISTS educations (
     degree TINYINT NOT NULL,
     user_id INT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
 );
 
@@ -35,7 +35,7 @@ CREATE table IF NOT EXISTS awards (
     description TEXT,
     user_id INT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
 );
 
@@ -47,7 +47,7 @@ CREATE table IF NOT EXISTS projects (
     enddate DATE NOT NULL,
     user_id INT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
 );
 
@@ -58,6 +58,6 @@ CREATE table IF NOT EXISTS certificates (
     acquisition_date DATE NOT NULL,
     user_id INT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE
 );
