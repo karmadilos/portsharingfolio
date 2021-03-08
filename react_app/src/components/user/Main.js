@@ -6,7 +6,15 @@ import Education from "./Education";
 import Awards from "./Awards";
 import Project from "./Project";
 import Certificate from "./Certificate";
-import { Button, Card, Container, Col, Row, Form } from "react-bootstrap/";
+import {
+  Button,
+  Card,
+  Container,
+  Col,
+  Modal,
+  Row,
+  Form,
+} from "react-bootstrap/";
 
 export default function Main() {
   const api_url = process.env.REACT_APP_API_URL;
@@ -26,8 +34,11 @@ export default function Main() {
     image_path: "",
     info: "",
   });
+  const [status, setStatus] = useState("");
+  const [message, setMessage] = useState("");
 
   const [isToggled, setIsToggled] = useState(false);
+  const [show, setShow] = useState(false);
   const [isEdittable, setIsEdittable] = useState(false);
 
   useEffect(() => {
@@ -53,6 +64,23 @@ export default function Main() {
       setIsEdittable(true);
     }
   }, [loggedin]);
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+
+  function report(e) {
+    e.preventDefault();
+    const data = {
+      user_id: loggedin,
+      reported_id: user_id,
+    };
+
+    axios.post(api_url + "blacklists", data, options).then((response) => {
+      setStatus(response.data.status);
+      setMessage(response.data.result.message);
+    });
+    setShow(false);
+  }
 
   return (
     <div className="root">
@@ -84,7 +112,7 @@ export default function Main() {
                     {output.email}
                   </Card.Subtitle>
                   <Card.Text>{output.info}</Card.Text>
-                  {isEdittable && (
+                  {isEdittable ? (
                     <Row className="justify-content-md-center">
                       <Button
                         type="button"
@@ -95,6 +123,40 @@ export default function Main() {
                         Edit
                       </Button>
                     </Row>
+                  ) : (
+                    <Row className="justify-content-md-center">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="btn-sm"
+                        onClick={handleShow}
+                      >
+                        신고하기
+                      </Button>
+                      <Modal show={show} onHide={handleClose}>
+                        <Modal.Header closeButton>
+                          <Modal.Title>정말 신고하시겠습니까?</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                          신고하시면 철회하실 수 없습니다! <br />
+                          3회 이상 신고 처리 당한 사용자의 계정은 삭제 조치
+                          됩니다.
+                        </Modal.Body>
+                        <Modal.Footer>
+                          <Button variant="danger" onClick={report}>
+                            신고
+                          </Button>
+                          <Button variant="secondary" onClick={handleClose}>
+                            취소
+                          </Button>
+                        </Modal.Footer>
+                      </Modal>
+                    </Row>
+                  )}
+                  {status && (
+                    <Form.Text className="text-danger text-center small mt-3">
+                      {message}
+                    </Form.Text>
                   )}
                 </Card.Body>
               )}

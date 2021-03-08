@@ -105,7 +105,9 @@ def login():
 
     # find from db
     with db.cursor(DictCursor) as cursor:
-        sql = "SELECT id, email, password, name FROM users WHERE email = %s"
+        sql = (
+            "SELECT id, email, password, name, report_count FROM users WHERE email = %s"
+        )
         cursor.execute(sql, (email,))
         user = cursor.fetchone()
 
@@ -126,6 +128,7 @@ def login():
             status="success",
             access_token=access_token,
             user_name=user["name"],
+            report_count=user["report_count"],
             result={"message": "로그인"},
         )
 
@@ -205,6 +208,44 @@ def network():
         cursor.execute(sql,)
         user = cursor.fetchall()
     return jsonify(status="success", user=user)
+
+
+@app.route("/blacklists", methods=["POST"])
+@jwt_required()
+def blacklists():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    reported_id = data.get("reported_id")
+    error = None
+
+    with db.cursor(DictCursor) as cursor:
+        sql = "SELECT reported_id FROM blacklists WHERE user_id = %s AND reported_id=%s"
+        cursor.execute(sql, (user_id, reported_id))
+        user = cursor.fetchone()
+
+    if user:
+        error = "이미 신고하셨습니다!"
+
+    if error is None:
+        with db.cursor(DictCursor) as cursor:
+            sql = "INSERT INTO `blacklists` (`user_id`, `reported_id`) VALUES (%s, %s)"
+            cursor.execute(sql, (user_id, reported_id))
+            db.commit()
+        with db.cursor(DictCursor) as cursor:
+            sql = "UPDATE users SET report_count = report_count + 1 WHERE id = %s"
+            cursor.execute(sql, reported_id)
+            db.commit()
+        with db.cursor(DictCursor) as cursor:
+            sql = "SELECT report_count FROM users WHERE id = %s"
+            cursor.execute(sql, reported_id)
+            check_count = cursor.fetchone()
+            if check_count["report_count"] >= 3:
+                with db.cursor(DictCursor) as cursor:
+                    sql = "DELETE FROM users WHERE id = %s"
+                    cursor.execute(sql, reported_id)
+                    db.commit()
+        return jsonify(status="success", result={"message": "신고가 접수되었습니다!"})
+    return jsonify(status="fail", result={"message": error})
 
 
 parser.add_argument("id")
