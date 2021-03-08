@@ -93,7 +93,7 @@ export default function Certificate({ isEdittable, user_id }) {
       id: input.id,
       title: input.title,
       description: input.description,
-      acquisition_date: input.acquisition_date,
+      acquisition_date: moment(input.acquisition_date).format("yyyy-MM-DD"),
     };
 
     if (option === "add") {

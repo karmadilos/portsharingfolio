@@ -3,6 +3,7 @@ CREATE table IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL,
     password TEXT NOT NULL,
     name VARCHAR(255) NOT NULL,
+    report_count TINYINT DEFAULT 0
     PRIMARY KEY(id),
     UNIQUE(email)
 );
@@ -59,5 +60,16 @@ CREATE table IF NOT EXISTS certificates (
     user_id INT NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY(user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
+CREATE table IF NOT EXISTS blacklists (
+    id INT NOT NULL  AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    reported_id INT NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(reported_id) REFERENCES users(id)
     ON DELETE CASCADE
 );

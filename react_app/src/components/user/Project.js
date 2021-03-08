@@ -94,8 +94,8 @@ export default function Project({ isEdittable, user_id }) {
       id: input.id,
       title: input.title,
       description: input.description,
-      startdate: input.startdate,
-      enddate: input.enddate,
+      startdate: moment(input.startdate).format("yyyy-MM-DD"),
+      enddate: moment(input.enddate).format("yyyy-MM-DD"),
     };
 
     if (option === "add") {
