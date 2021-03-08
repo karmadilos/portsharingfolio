@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button, Card, Col, Row, Form } from "react-bootstrap/";
+import { Button, Card, Col, Modal, Row, Form } from "react-bootstrap/";
 
-export default function Awards() {
-  const api_url = "http://localhost:5000/";
+export default function Awards({ isEdittable, user_id }) {
+  const api_url = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const options = {
     headers: {
@@ -16,44 +16,57 @@ export default function Awards() {
     description: "",
   });
   const [output, setOutput] = useState([]);
+  const [status, setStatus] = useState([]);
   const [check, setCheck] = useState(0);
   const [option, setOption] = useState("");
 
   const [isToggled, setIsToggled] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    axios.get(api_url + "awards", options).then((response) => {
-      setOutput(response.data.result);
-    });
-  }, [check]);
+    if (user_id === undefined) {
+      axios.get(api_url + "awards", options).then((response) => {
+        setOutput(response.data.result);
+      });
+    } else {
+      axios.get(api_url + `awards/${user_id}`, options).then((response) => {
+        setOutput(response.data.result);
+      });
+    }
+  }, [check, user_id]);
 
-  const awardsList = output.map((award) => (
-    <Card.Text>
+  const awardsList = output.map((award, index) => (
+    <Card.Text key={index}>
       <Row className="justify-content-between align-items-center row">
         <Col>
-          {award[1]}
+          {award["title"]}
           <br />
-          <span className="text-muted">{award[2]}</span>
+          <span className="text-muted">{award["description"]}</span>
         </Col>
-        <Button
-          type="button"
-          variant="link"
-          className="btn-sm mr-3"
-          onClick={() => {
-            setIsToggled(true);
-            setOption("edit");
-            setInput({
-              id: award[0],
-              title: award[1],
-              description: award[2],
-            });
-          }}
-        >
-          Edit
-        </Button>
+        {isEdittable && (
+          <Button
+            type="button"
+            variant="link"
+            className="btn-sm mr-3"
+            onClick={() => {
+              setIsToggled(true);
+              setOption("edit");
+              setInput({
+                id: award["id"],
+                title: award["title"],
+                description: award["description"],
+              });
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </Row>
     </Card.Text>
   ));
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
 
   const inputData = (key, data) => {
     setInput({
@@ -71,18 +84,26 @@ export default function Awards() {
     };
 
     if (option === "add") {
-      axios.post(api_url + "awards", data, options);
-      setInput({ title: "", description: "" });
-      setIsToggled(false);
-      setCheck(check + 1);
-      setInput({ title: "", description: "" });
+      axios.post(api_url + "awards", data, options).then((response) => {
+        setStatus(response.data);
+      });
     } else if (option === "edit") {
-      axios.put(api_url + "awards", data, options);
+      axios.patch(api_url + "awards", data, options).then((response) => {
+        setStatus(response.data);
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+    if (status.status === "success") {
       setIsToggled(false);
       setCheck(check + 1);
       setInput({ title: "", description: "" });
     }
-  }
+  }, [status]);
 
   function clear(e) {
     e.preventDefault();
@@ -93,6 +114,7 @@ export default function Awards() {
       },
       data: { id: input.id },
     });
+    setShow(false);
     setIsToggled(false);
     setCheck(check - 1);
     setInput({ title: "", description: "" });
@@ -123,6 +145,11 @@ export default function Awards() {
                 onChange={(e) => inputData("description", e.target.value)}
               />
             </Form.Group>
+            {status.status === "fail" && (
+              <Form.Text className="text-danger small mb-3">
+                {status.result.message}
+              </Form.Text>
+            )}
             <Form.Row className="justify-content-md-center">
               <Button className="mr-2" type="submit">
                 확인
@@ -132,11 +159,25 @@ export default function Awards() {
                   className="mr-2"
                   type="button"
                   variant="danger"
-                  onClick={clear}
+                  onClick={handleShow}
                 >
                   삭제
                 </Button>
               )}
+              <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                  <Modal.Title>정말 삭제하시겠습니까?</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>삭제하시면 되돌릴 수 없습니다!</Modal.Body>
+                <Modal.Footer>
+                  <Button variant="danger" onClick={clear}>
+                    삭제
+                  </Button>
+                  <Button variant="secondary" onClick={handleClose}>
+                    취소
+                  </Button>
+                </Modal.Footer>
+              </Modal>
               <Button
                 type="button"
                 variant="secondary"
@@ -150,18 +191,20 @@ export default function Awards() {
             </Form.Row>
           </Form>
         )}
-        <Row className="justify-content-md-center mt-3">
-          <Button
-            type="button"
-            onClick={() => {
-              setIsToggled(true);
-              setInput({ title: "", description: "" });
-              setOption("add");
-            }}
-          >
-            +
-          </Button>
-        </Row>
+        {isEdittable && (
+          <Row className="justify-content-md-center mt-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setIsToggled(true);
+                setInput({ title: "", description: "" });
+                setOption("add");
+              }}
+            >
+              +
+            </Button>
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );
